@@ -66,7 +66,7 @@ importers:
         specifier: 8.63.0
         version: 8.63.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
 
-  apps/transactions-be:
+  apps/coffra-be:
     dependencies:
       '@lukasbriza/eslint-config':
         specifier: workspace:*
@@ -13127,7 +13127,7 @@ snapshots:
     dependencies:
       '@types/estree': 1.0.9
       estree-walker: 2.0.2
-      picomatch: 4.0.4
+      picomatch: 4.0.5
 
   '@rtsao/scc@1.1.0': {}
 
