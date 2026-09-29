@@ -7,12 +7,24 @@ pnpm workspaces + Turborepo. Applications live in `apps/`, shared config in `pac
 generator-driven from `templates/` into `apps/`/`packages/`:
 
 ```bash
-pnpm turbo gen <type>       # e.g. app-next, app-mobile, package-api  (see README.md for the list)
+pnpm turbo gen <type> --args <answers…>   # e.g. app-next, app-mobile, package-api
 ```
 
-or `/scaffold <type> [name]` from Claude Code (wraps `turbo gen`, validates prerequisites). The
-generators are defined in `turbo/generators/config.ts`; edit the matching `templates/<type>/`, never a
-scaffolded copy. Dependency order for packages: `tokens → theme → styles → components`.
+**Prefer `--args` over the interactive prompt** — turbo's interactive stdin drops keystrokes on
+Windows (you'll see typed characters go missing), and `--args` is scriptable. Answers map positionally
+to the generator's prompts (`<name> <install>` for apps, `<install>` for fixed-folder packages;
+booleans `true`/`false`):
+
+```bash
+pnpm turbo gen app-next --args my-web true
+pnpm turbo gen app-nest --args my-api true true   # name, +Prisma, install
+pnpm turbo gen package-api --args true
+```
+
+or `/scaffold <type> [name]` from Claude Code (wraps `turbo gen` with `--args`, validates
+prerequisites). The generators are defined in `turbo/generators/config.ts`; edit the matching
+`templates/<type>/`, never a scaffolded copy. Dependency order for packages:
+`tokens → theme → styles → components`.
 
 Updates to the template propagate into projects built from it via the `sync-template` skill
 (3-way merge on owned paths — never a blind overwrite).
