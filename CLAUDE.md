@@ -99,7 +99,7 @@ pnpm format     # prettier write
   auto-format hook, which would desync in-progress `Edit` matches.
 - Knowledge graph: the `graphifyy` CLI (installed per-machine — `pip install graphifyy`) builds a
   graph into `graphify-out/` (gitignored, regenerable — never commit it). Build via the **terminal
-  CLI** (`graphify .`) or the `.husky/post-commit` hook (`graphify . --update`, backgrounded) — both
+  CLI** (`graphify .`) or the `.husky/post-commit` hook (`graphify . --update --code-only`, backgrounded) — both
   run without an agent.
   - **Code-only by default.** `.graphifyignore` excludes docs/papers/images, so the build is
     AST-only: no LLM, no API key, **no token cost**. (`.graphifyignore` _replaces_ the root
