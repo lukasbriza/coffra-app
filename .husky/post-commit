@@ -1,0 +1,5 @@
+# Keep the graphify knowledge graph current — only changed files are re-extracted.
+# No-op if graphify isn't installed; backgrounded so commits stay fast.
+# For guaranteed live sync instead, run `graphify . --watch` in a terminal.
+command -v graphify >/dev/null 2>&1 || exit 0
+graphify . --update >/dev/null 2>&1 &
