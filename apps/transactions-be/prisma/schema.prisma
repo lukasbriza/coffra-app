@@ -1,0 +1,13 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/modules/prisma/generated"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Model {
+  id String @id @default(uuid())
+}
