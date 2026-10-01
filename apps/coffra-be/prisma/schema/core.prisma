@@ -1,0 +1,22 @@
+/// How the user authenticates.
+enum AuthSource {
+  oidc
+}
+
+/// Application user, created on first OIDC login. Single-user in the MVP.
+/// Roles and tenant membership live in our DB, not in OIDC claims.
+model User {
+  id              String     @id @default(uuid()) @db.Uuid
+  email           String
+  authSource      AuthSource @default(oidc)
+  /// Stable user id at the identity provider (OIDC `sub` claim).
+  externalSubject String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // Back sides of Account.user and Category.user: virtual fields, no columns in the User table.
+  accounts   Account[]
+  categories Category[]
+
+  @@unique([authSource, externalSubject])
+}
