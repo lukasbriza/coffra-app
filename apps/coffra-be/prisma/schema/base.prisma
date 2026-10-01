@@ -7,7 +7,3 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
-
-model Model {
-  id String @id @default(uuid())
-}
