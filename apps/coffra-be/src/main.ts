@@ -1,21 +1,24 @@
+import { Logger } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 
 import { AppModule } from './app.module'
+import { configureApp } from './app.setup'
+import type { Env } from './modules/config'
+import { SWAGGER_PATH, setupSwagger } from './swagger.setup'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
 
-  const config = new DocumentBuilder()
-    .setTitle('NestJs Swagger')
-    .setDescription('NestJs App API')
-    .setVersion('1.0')
-    .build()
+  configureApp(app)
+  setupSwagger(app)
 
-  const document = SwaggerModule.createDocument(app, config)
-  SwaggerModule.setup('api/swagger', app, document)
+  const port = app.get<ConfigService<Env, true>>(ConfigService).get('PORT', { infer: true })
+  await app.listen(port)
 
-  await app.listen(3000)
+  const bootstrapLogger = new Logger('Bootstrap')
+  bootstrapLogger.log(`Listening on http://localhost:${port}`)
+  bootstrapLogger.log(`Swagger on http://localhost:${port}/${SWAGGER_PATH}`)
 }
 
 void bootstrap()

@@ -11,7 +11,10 @@ covers only what is specific to a NestJS app.
 
 ## Layout
 
-- `src/main.ts` — bootstrap (Nest factory + Swagger).
+- `src/main.ts` — bootstrap (Nest factory, port from `ConfigService`).
+- `src/app.setup.ts` — `configureApp(app)`: global prefix `api`, `ValidationPipe`, shutdown hooks. Shared with tests.
+- `src/swagger.setup.ts` — `buildSwaggerDocument` / `setupSwagger` (bearer auth, UI at `/api/swagger`).
+- `src/modules/health/` — `GET /api/health` (`@nestjs/terminus`, DB check via `PrismaHealthIndicator`).
 - `src/app.module.ts` — root module; register feature modules here.
 - Feature code in `src/modules/<feature>/` (module + controller + service + dto).
 
@@ -19,6 +22,9 @@ covers only what is specific to a NestJS app.
 
 - One module per feature; keep controllers thin, logic in services (DI).
 - DTOs validated with `class-validator`; enable a global `ValidationPipe` when adding input.
+- All routes live under the `api` prefix. New endpoint tests must boot via `configureApp(app)`.
+- **Inject with `@Inject(Token)` on every constructor parameter.** Vitest (esbuild) emits no decorator metadata, so type-based injection resolves to `undefined` in `Test.createTestingModule`.
+- `@nestjs/terminus` is pinned to 11.x: 12.x is ESM-only and this app is CommonJS.
 - Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`.
 
 ## Prisma 7 (optional)

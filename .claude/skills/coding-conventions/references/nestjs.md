@@ -20,12 +20,13 @@ src/modules/users/
 
 Nest needs decorated **classes** — this is the base skill's `class` exception. Providers/controllers
 are classes with **method** members (`getHello(): string {}`), not arrow-property fields.
-Dependencies via constructor injection: `constructor(private readonly usersService: UsersService) {}`.
+Dependencies via constructor injection with an explicit token:
+`constructor(@Inject(UsersService) private readonly usersService: UsersService) {}`.
 
 ```ts
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(@Inject(UsersService) private readonly usersService: UsersService) {}
 
   @Get()
   findAll(): Promise<UserDto[]> {
@@ -34,6 +35,9 @@ export class UsersController {
 }
 ```
 
+- `@Inject(Token)` is required on every constructor parameter: vitest (esbuild) emits no
+  `design:paramtypes`, so type-based injection resolves to `undefined` in tests (works in
+  `nest build`, which hides the bug). The token must be a value import, not `import type`.
 - Controllers stay thin — validate, delegate to a service, shape the response. No business logic.
 - Services own logic and data access; keep them injectable and unit-testable.
 
@@ -64,6 +68,7 @@ export class UsersController {
 
 | Mistake | Instead |
 |---|---|
+| Constructor param without `@Inject(Token)` | add it — DI fails under vitest otherwise |
 | Business logic in a controller | move it to the service |
 | `new PrismaClient()` in a module | inject `PrismaService` |
 | Raw `process.env` | `ConfigService` |
