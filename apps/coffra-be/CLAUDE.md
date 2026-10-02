@@ -27,6 +27,30 @@ covers only what is specific to a NestJS app.
 - `@nestjs/terminus` is pinned to 11.x: 12.x is ESM-only and this app is CommonJS.
 - Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`.
 
+## Dev environment (Postgres + Keycloak)
+
+`docker/docker-compose.yaml` (project `coffra-dev`). **DEV ONLY — all credentials are public.**
+
+```
+pnpm infra:up      # postgres + keycloak, waits for healthchecks (Keycloak cold start ~30 s)
+pnpm infra:down    # stops containers; Postgres data stays on volume `coffra-pgdata`
+pnpm infra:logs
+```
+
+- Never run `docker compose down -v` — it deletes `coffra-pgdata` (the dev database).
+- `pnpm dev` does not start Docker; run `infra:up` first. Ports bind to `127.0.0.1` only.
+- Postgres: `localhost:5439`, user/password `coffra`, DB `coffra_dev` (= `DATABASE_URL` in `.env.example`).
+- Keycloak: `http://localhost:8080`, admin console `admin` / `admin`. Realm `coffra`, client `coffra-be`
+  (confidential, secret `coffra-dev-secret`, PKCE S256 enforced, redirect `http://localhost:3000/api/auth/callback`).
+  Login user `dev@coffra.local` / `dev`; its `sub` is fixed (`dde84b4e-…`), so `User.externalSubject` survives recreation.
+- Keycloak keeps **no state** (embedded H2, no volume). `docker/keycloak/coffra-realm.json` is the single source of truth,
+  imported on container creation only. After editing it: `docker compose -f docker/docker-compose.yaml up -d --force-recreate keycloak`
+  (a plain `restart` keeps the already imported realm).
+- To capture changes made in the admin console: `docker compose -f docker/docker-compose.yaml exec keycloak /opt/keycloak/bin/kc.sh export --realm coffra --file /tmp/r.json`,
+  `docker compose … cp keycloak:/tmp/r.json …`, then prettier-format and commit.
+- `iss` must equal `OIDC_ISSUER_URL` exactly (`KC_HOSTNAME` is pinned to `http://localhost:8080`). The app runs on the host, not in a container.
+- A real IdP (homelab Keycloak) only needs the `OIDC_*` env vars changed plus an equivalent client (confidential, PKCE S256, matching redirect URI).
+
 ## Prisma 7 (optional)
 
 - Scaffold with `turbo gen app-nest` and answer "yes" to Prisma. That adds:
