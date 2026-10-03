@@ -17,7 +17,10 @@ covers only what is specific to a NestJS app.
 - `src/modules/health/` — `GET /api/health` (`@nestjs/terminus`, DB check via `PrismaHealthIndicator`).
 - `src/app.module.ts` — root module; register domain modules here (imported from their `index.ts`).
 - Domains in `src/modules/{core,transactions,dashboard}/` (module + controller + service + dto, grouped in subfolders).
+- `src/modules/core/auth/` — `AuthModule`: `AuthProviderInterface` port (`AUTH_PROVIDER` token) and `OidcAuthProvider` (`openid-client`). The domain barrel exports the token and types only: inject `@Inject(AUTH_PROVIDER)`, never the class.
+- A feature inside a domain (`core/auth`, `core/users`, ...) is its own Nest module, `<feature>.module.ts`, imported by the domain module. The feature module is internal: only the domain's `index.ts` is public.
 - Infrastructure modules (not domains): `src/modules/{config,health,prisma}/`, each with an `index.ts`.
+- `src/utils/` — project-wide pure helpers (no Nest, no domain imports), one function per file, the file is the kebab-case of the function name (`stringOrUndefined` → `string-or-undefined.ts`, the shared ESLint enforces kebab-case filenames), all re-exported from the `index.ts` barrel and imported through it (`'../../../utils'`). Put a helper here once a second domain needs it, or when it is generic by nature.
 
 ## Module boundaries
 
@@ -50,8 +53,13 @@ code later can see **why** something was built that way, not only what it does.
 - One module per feature; keep controllers thin, logic in services (DI).
 - DTOs validated with `class-validator`; enable a global `ValidationPipe` when adding input.
 - All routes live under the `api` prefix. New endpoint tests must boot via `configureApp(app)`.
+- **Ports get the `Interface` suffix** (`AuthProviderInterface`): an interface that classes implement and callers depend on. Plain data shapes (`AuthSession`, `LoginRequest`) do not.
+- **Tests mirror `src/`**: module tests in `test/modules/<module>/…` (plus the feature folder when the module has one, e.g. `test/modules/core/auth/`), util tests in `test/utils/`, tests of root files (`app.setup.ts`, `swagger.setup.ts`) directly in `test/`. File name `<subject>.spec.ts`.
+- **Type files are named `<module>.types.ts`** (e.g. `core/auth/auth.types.ts`) and hold types only. Runtime values that go with them (DI tokens) live in `<module>.constants.ts`.
 - **Inject with `@Inject(Token)` on every constructor parameter.** Vitest (esbuild) emits no decorator metadata, so type-based injection resolves to `undefined` in `Test.createTestingModule`.
 - `@nestjs/terminus` is pinned to 11.x: 12.x is ESM-only and this app is CommonJS.
+- `openid-client` 6.x is ESM-only too and loads through `require(esm)`: that needs `"module": "node20"` in this app's `tsconfig.json` (otherwise TS1479) and Node >= 22.12. See ADR 0008.
+- `OIDC_ISSUER_URL` over plain `http:` works outside production only (dev Keycloak). A production start with it fails env validation, so `pnpm start` (`NODE_ENV=production`) needs an `https:` issuer.
 - Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`.
 
 ## Dev environment (Postgres + Keycloak)

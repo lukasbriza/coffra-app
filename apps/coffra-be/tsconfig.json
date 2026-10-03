@@ -4,5 +4,5 @@
   "exclude": ["build", "node_modules", "lint-staged.config.mjs"],
   "ts-node": { "transpileOnly": true },
   "references": [],
-  "compilerOptions": { "experimentalDecorators": true, "sourceMap": true }
+  "compilerOptions": { "experimentalDecorators": true, "module": "node20", "sourceMap": true }
 }

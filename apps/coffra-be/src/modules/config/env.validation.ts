@@ -82,6 +82,13 @@ export function validateEnv(config: Record<string, unknown>): Env {
     problems.push('JWT_REFRESH_SECRET: must differ from JWT_ACCESS_SECRET')
   }
 
+  // Plain http is tolerated for the dev Keycloak only (ADR 0008): production must fail to start instead.
+  const issuerValid = !errors.some((error) => error.property === 'OIDC_ISSUER_URL')
+
+  if (issuerValid && env.NODE_ENV === NodeEnv.Production && env.OIDC_ISSUER_URL.toLowerCase().startsWith('http:')) {
+    problems.push('OIDC_ISSUER_URL: must use https in production')
+  }
+
   if (problems.length > 0) {
     throw new Error(`Invalid environment configuration:\n${problems.map((problem) => `  - ${problem}`).join('\n')}`)
   }

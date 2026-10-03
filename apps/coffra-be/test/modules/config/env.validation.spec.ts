@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { validateEnv } from '../src/modules/config/env.validation'
+import { validateEnv } from '../../../src/modules/config/env.validation'
 
 const SECRET_A = 'a'.repeat(32)
 const SECRET_B = 'b'.repeat(32)
@@ -79,6 +79,19 @@ describe('validateEnv', () => {
     expect(() => validateEnv({ ...validEnv(), JWT_REFRESH_SECRET: SECRET_A })).toThrow(
       'JWT_REFRESH_SECRET: must differ from JWT_ACCESS_SECRET',
     )
+  })
+
+  it('throws on an http OIDC issuer in production', () => {
+    expect(() => validateEnv({ ...validEnv(), NODE_ENV: 'production' })).toThrow(
+      'OIDC_ISSUER_URL: must use https in production',
+    )
+  })
+
+  it('accepts an https OIDC issuer in production and an http one in development', () => {
+    expect(() =>
+      validateEnv({ ...validEnv(), NODE_ENV: 'production', OIDC_ISSUER_URL: 'https://auth.example.com/realms/coffra' }),
+    ).not.toThrow()
+    expect(() => validateEnv({ ...validEnv(), NODE_ENV: 'development' })).not.toThrow()
   })
 
   it('does not leak secret values in the error', () => {
