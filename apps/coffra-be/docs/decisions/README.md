@@ -35,12 +35,13 @@ and mark the old one `Superseded by NNNN`.
 
 ## Index
 
-| #                                            | Decision                                      | Status   |
-| -------------------------------------------- | --------------------------------------------- | -------- |
-| [0001](./0001-modular-monolith.md)           | Modular monolith with domain modules          | Accepted |
-| [0002](./0002-multi-file-prisma-schema.md)   | Prisma schema split by domain, one client     | Accepted |
-| [0003](./0003-transfer-as-paired-rows.md)    | Transfer stored as two paired rows            | Accepted |
-| [0004](./0004-ownership-through-account.md)  | Transaction ownership through its account     | Accepted |
-| [0005](./0005-money-and-currency.md)         | Money as Decimal, currency per account        | Accepted |
-| [0006](./0006-stateless-jwt-session.md)      | Stateless own JWT session after OIDC login    | Accepted |
-| [0007](./0007-commonjs-and-esm-only-deps.md) | Stay CommonJS, pin or avoid ESM-only packages | Accepted |
+| #                                            | Decision                                            | Status   |
+| -------------------------------------------- | --------------------------------------------------- | -------- |
+| [0001](./0001-modular-monolith.md)           | Modular monolith with domain modules                | Accepted |
+| [0002](./0002-multi-file-prisma-schema.md)   | Prisma schema split by domain, one client           | Accepted |
+| [0003](./0003-transfer-as-paired-rows.md)    | Transfer stored as two paired rows                  | Accepted |
+| [0004](./0004-ownership-through-account.md)  | Transaction ownership through its account           | Accepted |
+| [0005](./0005-money-and-currency.md)         | Money as Decimal, currency per account              | Accepted |
+| [0006](./0006-stateless-jwt-session.md)      | Stateless own JWT session after OIDC login          | Accepted |
+| [0007](./0007-commonjs-and-esm-only-deps.md) | Stay CommonJS, pin or avoid ESM-only packages       | Accepted |
+| [0008](./0008-oidc-client-library.md)        | `openid-client` v6 as OIDC client, `module: node20` | Accepted |
