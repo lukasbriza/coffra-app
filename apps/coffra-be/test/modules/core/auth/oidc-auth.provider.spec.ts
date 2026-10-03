@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 import type { Env } from '../../../../src/modules/config'
 import { AUTH_PROVIDER, type AuthChecks, type AuthProviderInterface, CoreModule } from '../../../../src/modules/core'
 import { OidcAuthProvider } from '../../../../src/modules/core/auth/oidc-auth.provider'
+import { PrismaService } from '../../../../src/modules/prisma'
 
 // Only the network calls are mocked: PKCE helpers and `buildAuthorizationUrl` stay real,
 // so the tests check the URL the browser would actually be sent to.
@@ -271,7 +272,14 @@ describe('CoreModule', () => {
     @Module({ providers: [{ provide: ConfigService, useValue: configService() }], exports: [ConfigService] })
     class ConfigStubModule {}
 
-    const moduleRef = await Test.createTestingModule({ imports: [ConfigStubModule, CoreModule] }).compile()
+    // `PrismaModule` is global in the app and `UsersModule` (also part of `CoreModule`) injects its service.
+    @Global()
+    @Module({ providers: [{ provide: PrismaService, useValue: {} }], exports: [PrismaService] })
+    class PrismaStubModule {}
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [ConfigStubModule, PrismaStubModule, CoreModule],
+    }).compile()
     const provider = moduleRef.get<AuthProviderInterface>(AUTH_PROVIDER)
 
     expect(provider).toBeInstanceOf(OidcAuthProvider)

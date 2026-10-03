@@ -18,6 +18,7 @@ covers only what is specific to a NestJS app.
 - `src/app.module.ts` — root module; register domain modules here (imported from their `index.ts`).
 - Domains in `src/modules/{core,transactions,dashboard}/` (module + controller + service + dto, grouped in subfolders).
 - `src/modules/core/auth/` — `AuthModule`: `AuthProviderInterface` port (`AUTH_PROVIDER` token) and `OidcAuthProvider` (`openid-client`). The domain barrel exports the token and types only: inject `@Inject(AUTH_PROVIDER)`, never the class.
+- `src/modules/core/users/` — `UsersModule`: `UsersService.upsertByExternalSubject` finds or creates the `User` by `(oidc, sub)` (never by email) and keeps the email in sync. Exported to `AuthModule` (T9), not through the domain barrel.
 - A feature inside a domain (`core/auth`, `core/users`, ...) is its own Nest module, `<feature>.module.ts`, imported by the domain module. The feature module is internal: only the domain's `index.ts` is public.
 - Infrastructure modules (not domains): `src/modules/{config,health,prisma}/`, each with an `index.ts`.
 - `src/utils/` — project-wide pure helpers (no Nest, no domain imports), one function per file, the file is the kebab-case of the function name (`stringOrUndefined` → `string-or-undefined.ts`, the shared ESLint enforces kebab-case filenames), all re-exported from the `index.ts` barrel and imported through it (`'../../../utils'`). Put a helper here once a second domain needs it, or when it is generic by nature.
