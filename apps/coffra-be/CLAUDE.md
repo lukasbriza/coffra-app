@@ -32,6 +32,19 @@ Modular monolith: one Nest app, a domain = a module in `src/modules/<domain>/`.
 - `config`, `health` and `prisma` are infrastructure: reachable from anywhere through their `index.ts`, but they import no domain.
 - Adding a domain: folder + `<domain>.module.ts` + `index.ts`, an import in `AppModule`.
 
+## Architecture decisions
+
+Significant architectural decisions are written as separate markdown files in `docs/decisions/`, one per
+decision, named `NNNN-kebab-title.md` (next free number). Format and the index are in
+`docs/decisions/README.md`. The point is that a developer (or an AI agent) debugging or changing the
+code later can see **why** something was built that way, not only what it does.
+
+- **Read first:** when debugging, or when a design looks odd (a CHECK constraint, a pinned dependency, a missing `userId`, a module boundary), look in `docs/decisions/` for the reason before changing it.
+- Write one when you pick between real alternatives with lasting consequences (module boundaries, data model, auth/session, a dependency pinned for a structural reason). Not for routine implementation choices.
+- Record the context, the alternatives you rejected and the consequences, not only the outcome.
+- Write it in the same PR as the change, and add it to the index.
+- Do not rewrite an accepted decision. To change course, add a new record and mark the old one `Superseded by NNNN`.
+
 ## Conventions
 
 - One module per feature; keep controllers thin, logic in services (DI).
