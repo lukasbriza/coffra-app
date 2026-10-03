@@ -15,8 +15,22 @@ covers only what is specific to a NestJS app.
 - `src/app.setup.ts` — `configureApp(app)`: global prefix `api`, `ValidationPipe`, shutdown hooks. Shared with tests.
 - `src/swagger.setup.ts` — `buildSwaggerDocument` / `setupSwagger` (bearer auth, UI at `/api/swagger`).
 - `src/modules/health/` — `GET /api/health` (`@nestjs/terminus`, DB check via `PrismaHealthIndicator`).
-- `src/app.module.ts` — root module; register feature modules here.
-- Feature code in `src/modules/<feature>/` (module + controller + service + dto).
+- `src/app.module.ts` — root module; register domain modules here (imported from their `index.ts`).
+- Domains in `src/modules/{core,transactions,dashboard}/` (module + controller + service + dto, grouped in subfolders).
+- Infrastructure modules (not domains): `src/modules/{config,health,prisma}/`, each with an `index.ts`.
+
+## Module boundaries
+
+Modular monolith: one Nest app, a domain = a module in `src/modules/<domain>/`.
+
+1. A domain exports only through its `index.ts`. Everything else imports `'../<domain>'`, never `'../<domain>/…'`.
+2. A domain touches only its own Prisma models (`prisma/schema/<domain>.prisma`). Foreign data comes through a public service of the other domain.
+3. Dependency direction is `core` ← `transactions` ← `dashboard`. `core` imports no domain, `transactions` only `core`, `dashboard` `core` and `transactions`.
+4. The only allowed relations between schemas are foreign keys to `User` and `tenantId`.
+
+- **No rule is lint-enforced** (deliberately dropped): the boundaries hold by discipline and review. Inside its own domain, files import freely.
+- `config`, `health` and `prisma` are infrastructure: reachable from anywhere through their `index.ts`, but they import no domain.
+- Adding a domain: folder + `<domain>.module.ts` + `index.ts`, an import in `AppModule`.
 
 ## Conventions
 
