@@ -19,6 +19,7 @@ covers only what is specific to a NestJS app.
 
 - One module per feature; keep controllers thin, logic in services (DI).
 - DTOs validated with `class-validator`; enable a global `ValidationPipe` when adding input.
+- **Inject with `@Inject(Token)` on every constructor parameter.** Vitest (esbuild) emits no decorator metadata, so type-based injection resolves to `undefined` in `Test.createTestingModule`.
 - Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`.
 
 ## Prisma 7 (optional)

@@ -1,0 +1,91 @@
+/// Kind of account holding money.
+enum AccountType {
+  bank
+  cash
+}
+
+/// `income` and `expense` are counted in the dashboard aggregation; `transfer` only moves money
+/// between own accounts and affects balances only.
+enum TransactionType {
+  income
+  expense
+  transfer
+}
+
+/// Side of a transfer. Set only on `transfer` rows: `out` leaves the account, `in` arrives to it.
+/// `Transaction.amount` is always positive, so the direction has to be stored explicitly.
+enum TransferDirection {
+  out
+  in
+}
+
+/// Place where money is held (bank account, cash). Owned by one user, has a single currency.
+/// Deleting an account that still has transactions is forbidden.
+model Account {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @db.Uuid
+  name      String
+  type      AccountType
+  currency  String      @db.Char(3)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // Foreign key side: `userId` is the real column, `user` is only a virtual field for queries.
+  // Cascade: deleting the user deletes their accounts.
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Back side of Transaction.account: virtual, no column, no @relation arguments.
+  transactions Transaction[]
+
+  @@index([userId])
+}
+
+/// User-defined category for income/expense transactions. A transaction has at most one category.
+/// Deleting a category keeps its transactions and sets their `categoryId` to null.
+model Category {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  /// Unique per user.
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Cascade: deleting the user deletes their categories.
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Back side of Transaction.category: virtual, no column.
+  transactions Transaction[]
+
+  @@unique([userId, name])
+}
+
+/// Single money movement on an account.
+///
+/// - Ownership: no `userId` here, it goes through `account.userId`. The service must keep the
+///   account and the category owned by the same user.
+/// - Transfer: two rows (`out` and `in`) sharing `transferPairId`.
+/// - Constraints: CHECKs (amount > 0, transfer shape) are not expressible in Prisma and are
+///   added by hand in the T2 migration.
+model Transaction {
+  id                String             @id @default(uuid()) @db.Uuid
+  accountId         String             @db.Uuid
+  type              TransactionType
+  amount            Decimal            @db.Decimal(19, 4)
+  date              DateTime           @db.Date
+  note              String?
+  categoryId        String?            @db.Uuid
+  transferPairId    String?            @db.Uuid
+  transferDirection TransferDirection?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  // `fields` = FK column here, `references` = target column. Only one relation exists between
+  // these two models, so no relation name is needed.
+  // Restrict: an account that still has transactions cannot be deleted.
+  account  Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  // Optional (`?`) because SetNull needs a nullable FK: deleting the category keeps the
+  // transaction and nulls `categoryId`.
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@unique([transferPairId, transferDirection])
+  @@index([accountId])
+  @@index([categoryId])
+}

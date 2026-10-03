@@ -1,0 +1,57 @@
+# coffra-be local dev infrastructure: Postgres + Keycloak.
+# DEV ONLY — every password/secret here is public. Never reuse them anywhere real.
+#
+# Driven by the `infra:*` scripts in apps/coffra-be/package.json.
+#   - Postgres keeps its data on the named volume `coffra-pgdata` (survives `down`).
+#     Do NOT run `docker compose down -v`: it deletes that volume.
+#   - Keycloak keeps no state (embedded H2, no volume). The realm in
+#     keycloak/coffra-realm.json is the single source of truth and is re-imported on
+#     every container (re)creation.
+name: coffra-dev
+
+services:
+  postgres:
+    image: postgres:17.5-alpine3.22
+    environment:
+      POSTGRES_USER: coffra
+      POSTGRES_PASSWORD: coffra
+      POSTGRES_DB: coffra_dev
+    ports:
+      - '127.0.0.1:5439:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U coffra -d coffra_dev']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.0
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Stable `iss` in tokens/well-known; must equal OIDC_ISSUER_URL's origin.
+      KC_HOSTNAME: http://localhost:8080
+      KC_HEALTH_ENABLED: 'true'
+    ports:
+      - '127.0.0.1:8080:8080'
+    volumes:
+      - ./keycloak/coffra-realm.json:/opt/keycloak/data/import/coffra-realm.json:ro
+    healthcheck:
+      # The image has no curl; probe the management port (9000) over raw TCP.
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.0\r\n\r\n' >&3 &&
+          grep -q '"status": "UP"' <&3
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  pgdata:
+    name: coffra-pgdata
