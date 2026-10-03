@@ -4,6 +4,7 @@ import { validateEnv } from '../../../src/modules/config/env.validation'
 
 const SECRET_A = 'a'.repeat(32)
 const SECRET_B = 'b'.repeat(32)
+const SECRET_C = 'c'.repeat(32)
 
 const validEnv = (): Record<string, unknown> => ({
   DATABASE_URL: 'postgresql://coffra:coffra@localhost:5439/coffra_dev?schema=public',
@@ -13,6 +14,14 @@ const validEnv = (): Record<string, unknown> => ({
   OIDC_REDIRECT_URI: 'http://localhost:3000/api/auth/callback',
   JWT_ACCESS_SECRET: SECRET_A,
   JWT_REFRESH_SECRET: SECRET_B,
+  AUTH_CHECKS_SECRET: SECRET_C,
+})
+
+const productionEnv = (): Record<string, unknown> => ({
+  ...validEnv(),
+  NODE_ENV: 'production',
+  OIDC_ISSUER_URL: 'https://auth.example.com/realms/coffra',
+  OIDC_REDIRECT_URI: 'https://coffra.example.com/api/auth/callback',
 })
 
 const errorMessage = (config: Record<string, unknown>): string => {
@@ -49,6 +58,7 @@ describe('validateEnv', () => {
     'OIDC_REDIRECT_URI',
     'JWT_ACCESS_SECRET',
     'JWT_REFRESH_SECRET',
+    'AUTH_CHECKS_SECRET',
   ])('throws naming %s when missing', (name) => {
     const config = Object.fromEntries(Object.entries(validEnv()).filter(([key]) => key !== name))
 
@@ -81,16 +91,36 @@ describe('validateEnv', () => {
     )
   })
 
+  it('throws on a login checks secret shorter than 32 chars', () => {
+    expect(() => validateEnv({ ...validEnv(), AUTH_CHECKS_SECRET: 'short' })).toThrow('AUTH_CHECKS_SECRET')
+  })
+
+  it('throws when the login checks secret equals the access secret', () => {
+    expect(() => validateEnv({ ...validEnv(), AUTH_CHECKS_SECRET: SECRET_A })).toThrow(
+      'AUTH_CHECKS_SECRET: must differ from JWT_ACCESS_SECRET',
+    )
+  })
+
+  it('throws when the login checks secret equals the refresh secret', () => {
+    expect(() => validateEnv({ ...validEnv(), AUTH_CHECKS_SECRET: SECRET_B })).toThrow(
+      'AUTH_CHECKS_SECRET: must differ from JWT_REFRESH_SECRET',
+    )
+  })
+
   it('throws on an http OIDC issuer in production', () => {
-    expect(() => validateEnv({ ...validEnv(), NODE_ENV: 'production' })).toThrow(
+    expect(() => validateEnv({ ...productionEnv(), OIDC_ISSUER_URL: 'http://localhost:8080/realms/coffra' })).toThrow(
       'OIDC_ISSUER_URL: must use https in production',
     )
   })
 
-  it('accepts an https OIDC issuer in production and an http one in development', () => {
+  it('throws on an http OIDC redirect URI in production', () => {
     expect(() =>
-      validateEnv({ ...validEnv(), NODE_ENV: 'production', OIDC_ISSUER_URL: 'https://auth.example.com/realms/coffra' }),
-    ).not.toThrow()
+      validateEnv({ ...productionEnv(), OIDC_REDIRECT_URI: 'http://localhost:3000/api/auth/callback' }),
+    ).toThrow('OIDC_REDIRECT_URI: must use https in production')
+  })
+
+  it('accepts https OIDC URLs in production and http ones in development', () => {
+    expect(() => validateEnv(productionEnv())).not.toThrow()
     expect(() => validateEnv({ ...validEnv(), NODE_ENV: 'development' })).not.toThrow()
   })
 

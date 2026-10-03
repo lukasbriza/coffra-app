@@ -12,13 +12,15 @@ covers only what is specific to a NestJS app.
 ## Layout
 
 - `src/main.ts` — bootstrap (Nest factory, port from `ConfigService`).
-- `src/app.setup.ts` — `configureApp(app)`: global prefix `api`, `ValidationPipe`, shutdown hooks. Shared with tests.
+- `src/app.setup.ts` — `configureApp(app)`: global prefix `api`, `cookie-parser`, `ValidationPipe`, shutdown hooks. Shared with tests.
 - `src/swagger.setup.ts` — `buildSwaggerDocument` / `setupSwagger` (bearer auth, UI at `/api/swagger`).
 - `src/modules/health/` — `GET /api/health` (`@nestjs/terminus`, DB check via `PrismaHealthIndicator`).
 - `src/app.module.ts` — root module; register domain modules here (imported from their `index.ts`).
 - Domains in `src/modules/{core,transactions,dashboard}/` (module + controller + service + dto, grouped in subfolders).
 - `src/modules/core/auth/` — `AuthModule`: `AuthProviderInterface` port (`AUTH_PROVIDER` token) and `OidcAuthProvider` (`openid-client`). The domain barrel exports the token and types only: inject `@Inject(AUTH_PROVIDER)`, never the class.
-- `src/modules/core/users/` — `UsersModule`: `UsersService.upsertByExternalSubject` finds or creates the `User` by `(oidc, sub)` (never by email) and keeps the email in sync. Exported to `AuthModule` (T9), not through the domain barrel.
+  - Login flow: `AuthController` (`GET /api/auth/login` → 302 to the IdP, `GET /api/auth/callback`) is HTTP only; `AuthService` ties the provider and `UsersService` together and touches the user last; `AuthChecksService` signs/verifies the cookie `coffra_oidc_checks` that carries `state`, `nonce` and the PKCE verifier between the two requests (signed with `AUTH_CHECKS_SECRET`, 10 min, single-use, `SameSite=Lax`; ADR 0009). The callback path is the redirect URI registered at the IdP: do not move it.
+  - The callback body (`{ userId, email }`) is temporary until T10 issues tokens. T11 marks both routes `@Public()`.
+- `src/modules/core/users/` — `UsersModule`: `UsersService.upsertByExternalSubject` finds or creates the `User` by `(oidc, sub)` (never by email) and keeps the email in sync. Exported to `AuthModule`, not through the domain barrel.
 - A feature inside a domain (`core/auth`, `core/users`, ...) is its own Nest module, `<feature>.module.ts`, imported by the domain module. The feature module is internal: only the domain's `index.ts` is public.
 - Infrastructure modules (not domains): `src/modules/{config,health,prisma}/`, each with an `index.ts`.
 - `src/utils/` — project-wide pure helpers (no Nest, no domain imports), one function per file, the file is the kebab-case of the function name (`stringOrUndefined` → `string-or-undefined.ts`, the shared ESLint enforces kebab-case filenames), all re-exported from the `index.ts` barrel and imported through it (`'../../../utils'`). Put a helper here once a second domain needs it, or when it is generic by nature.
@@ -56,11 +58,12 @@ code later can see **why** something was built that way, not only what it does.
 - All routes live under the `api` prefix. New endpoint tests must boot via `configureApp(app)`.
 - **Ports get the `Interface` suffix** (`AuthProviderInterface`): an interface that classes implement and callers depend on. Plain data shapes (`AuthSession`, `LoginRequest`) do not.
 - **Tests mirror `src/`**: module tests in `test/modules/<module>/…` (plus the feature folder when the module has one, e.g. `test/modules/core/auth/`), util tests in `test/utils/`, tests of root files (`app.setup.ts`, `swagger.setup.ts`) directly in `test/`. File name `<subject>.spec.ts`.
-- **Type files are named `<module>.types.ts`** (e.g. `core/auth/auth.types.ts`) and hold types only. Runtime values that go with them (DI tokens) live in `<module>.constants.ts`.
+- **Type files hold types only.** A module with its own types names the file `<module>.types.ts` (`core/users/users.types.ts`); a feature folder whose types are shared by several files (`core/auth/types.ts`) uses plain `types.ts`. Runtime values that go with them (DI tokens) live in `<module>.constants.ts`.
 - **Inject with `@Inject(Token)` on every constructor parameter.** Vitest (esbuild) emits no decorator metadata, so type-based injection resolves to `undefined` in `Test.createTestingModule`.
 - `@nestjs/terminus` is pinned to 11.x: 12.x is ESM-only and this app is CommonJS.
 - `openid-client` 6.x is ESM-only too and loads through `require(esm)`: that needs `"module": "node20"` in this app's `tsconfig.json` (otherwise TS1479) and Node >= 22.12. See ADR 0008.
 - `OIDC_ISSUER_URL` over plain `http:` works outside production only (dev Keycloak). A production start with it fails env validation, so `pnpm start` (`NODE_ENV=production`) needs an `https:` issuer.
+- `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` and `AUTH_CHECKS_SECRET` must all differ (env validation enforces it), so one kind of signed value is never accepted as another. In production `OIDC_REDIRECT_URI` must be `https:` too (the login cookie is `Secure`).
 - Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`.
 
 ## Dev environment (Postgres + Keycloak)

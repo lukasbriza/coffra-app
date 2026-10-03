@@ -14,6 +14,12 @@ export type LoginRequest = {
   checks: AuthChecks
 }
 
+/** A login the app has started: where to send the browser and the signed `checks` token for its cookie. */
+export type StartedLogin = {
+  authorizationUrl: string
+  checksToken: string
+}
+
 export type AuthSession = {
   /** Stable user id at the identity provider (OIDC `sub`), maps to `User.externalSubject`. */
   subject: string
