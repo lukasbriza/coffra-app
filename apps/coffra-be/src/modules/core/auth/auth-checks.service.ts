@@ -2,15 +2,13 @@ import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 
-import { describeError } from '../../../utils'
+import { describeError, isNonEmptyString } from '../../../utils'
 import type { Env } from '../../config'
 
 import { AUTH_CHECKS_TTL_SECONDS } from './auth.constants'
 import type { AuthChecks } from './types'
 
 const ALGORITHM = 'HS256'
-
-const isNonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.length > 0
 
 /**
  * Seals the login checks into a short-lived signed token for the cookie (ADR 0009). Signed with its own secret,

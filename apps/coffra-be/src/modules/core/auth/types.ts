@@ -20,6 +20,30 @@ export type StartedLogin = {
   checksToken: string
 }
 
+/** The session the app issues after a login: its own access and refresh JWT (ADR 0006). */
+export type TokenPair = {
+  accessToken: string
+  refreshToken: string
+  /** Lifetime of the access token in seconds, the client plans its refresh by it. */
+  expiresIn: number
+}
+
+/** A verified access token: who it was issued to. */
+export type VerifiedAccessToken = {
+  userId: string
+}
+
+/** A verified refresh token. `expiresAt` (JWT `exp`, seconds) is handed on to the next one, so the session has a fixed end. */
+export type VerifiedRefreshToken = VerifiedAccessToken & {
+  expiresAt: number
+}
+
+/** Where to send the browser to end the session at the IdP. */
+export type LogoutRequest = {
+  /** `null` when the IdP does not advertise an end-session endpoint (it is optional in OIDC discovery). */
+  endSessionUrl: string | null
+}
+
 export type AuthSession = {
   /** Stable user id at the identity provider (OIDC `sub`), maps to `User.externalSubject`. */
   subject: string
@@ -47,4 +71,9 @@ export type AuthProviderInterface = {
   validateSession(callbackParams: URLSearchParams, checks: AuthChecks): Promise<AuthSession>
   /** Fetches the profile from the identity provider. Throws `UnauthorizedException` when it has no email. */
   getUserInfo(session: AuthSession): Promise<AuthUserInfo>
+  /**
+   * Builds the URL that ends the session at the identity provider (the counterpart of `login`). Only builds it:
+   * the browser has to navigate there, the provider calls nothing and keeps no state.
+   */
+  logout(): Promise<LogoutRequest>
 }

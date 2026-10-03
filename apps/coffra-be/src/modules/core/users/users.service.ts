@@ -19,4 +19,9 @@ export class UsersService {
       update: { email },
     })
   }
+
+  /** `null` when the user no longer exists, e.g. it was deleted while its refresh token was still valid. */
+  findById(id: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { id } })
+  }
 }

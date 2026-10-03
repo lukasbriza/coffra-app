@@ -1,6 +1,20 @@
-import { Controller, Get, HttpStatus, Inject, Redirect, Req, Res, type HttpRedirectResponse } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Post,
+  Redirect,
+  Req,
+  Res,
+  type HttpRedirectResponse,
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import {
+  ApiBadRequestResponse,
   ApiFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -15,8 +29,12 @@ import { type Env, NodeEnv } from '../../config'
 
 import { AUTH_CHECKS_COOKIE, AUTH_CHECKS_TTL_SECONDS } from './auth.constants'
 import { AuthService } from './auth.service'
+import { LogoutResponseDto } from './dto/logout-response.dto'
+import { RefreshTokenDto } from './dto/refresh-token.dto'
+import { TokenPairDto } from './dto/token-pair.dto'
+import type { LogoutRequest, TokenPair } from './types'
 
-// T11 marks both routes `@Public()` once the global guard exists.
+// T11 marks login, callback, refresh and logout `@Public()` once the global guard exists.
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -52,19 +70,13 @@ export class AuthController {
 
   // The path must stay `/api/auth/callback`: it is the redirect URI registered at the identity provider.
   @Get('callback')
-  @ApiOperation({ summary: 'Finish the OIDC login: validate the response, exchange the code, resolve the user' })
-  @ApiOkResponse({
-    description: 'The resolved user. Temporary body, T10 replaces it with the issued tokens',
-    schema: { type: 'object', properties: { userId: { type: 'string' }, email: { type: 'string' } } },
-  })
+  @ApiOperation({ summary: 'Finish the OIDC login: validate the response, exchange the code, issue the session' })
+  @ApiOkResponse({ description: 'The access and refresh token of the user who logged in', type: TokenPairDto })
   @ApiUnauthorizedResponse({
     description: 'Missing or expired login cookie, or the identity provider response is invalid',
   })
   @ApiServiceUnavailableResponse({ description: 'The identity provider is unavailable' })
-  async callback(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<{ userId: string; email: string }> {
+  async callback(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<TokenPair> {
     res.setHeader('Cache-Control', 'no-store')
     // The checks are single-use: dropped on every callback, whether it succeeds or not.
     res.clearCookie(AUTH_CHECKS_COOKIE, this.cookieOptions)
@@ -74,11 +86,36 @@ export class AuthController {
     const cookies = req.cookies as Record<string, unknown> | undefined
     const checksToken = cookies?.[AUTH_CHECKS_COOKIE]
 
-    const user = await this.auth.completeLogin(
-      callbackParams,
-      typeof checksToken === 'string' ? checksToken : undefined,
-    )
+    return this.auth.completeLogin(callbackParams, typeof checksToken === 'string' ? checksToken : undefined)
+  }
 
-    return { userId: user.id, email: user.email }
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary: 'Swap a refresh token for a new token pair',
+    description:
+      'The new refresh token ends when the old one would have, so a session lasts at most `JWT_REFRESH_TTL_SECONDS` from the login. The old refresh token is not revoked.',
+  })
+  @ApiOkResponse({ description: 'A new access and refresh token', type: TokenPairDto })
+  @ApiBadRequestResponse({ description: 'The body has no `refreshToken` string' })
+  @ApiUnauthorizedResponse({
+    description: 'The refresh token is missing, invalid, expired, not a refresh token, or its user no longer exists',
+  })
+  refresh(@Body() { refreshToken }: RefreshTokenDto): Promise<TokenPair> {
+    return this.auth.refresh(refreshToken)
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get the URL that ends the session at the identity provider',
+    description:
+      'Stateless: nothing changes on the server and no token is needed. The client must discard both tokens (the refresh token stays valid until it expires) and navigate the browser to `endSessionUrl`, otherwise the session at the identity provider survives and the next login needs no password.',
+  })
+  @ApiOkResponse({ description: 'Where to send the browser', type: LogoutResponseDto })
+  @ApiServiceUnavailableResponse({ description: 'The identity provider is unavailable' })
+  logout(): Promise<LogoutRequest> {
+    return this.auth.logout()
   }
 }

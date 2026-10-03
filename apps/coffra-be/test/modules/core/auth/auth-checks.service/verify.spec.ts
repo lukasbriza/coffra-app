@@ -1,51 +1,13 @@
-import 'reflect-metadata'
+import { UnauthorizedException } from '@nestjs/common'
+import { describe, expect, it, vi } from 'vitest'
 
-import { Logger, UnauthorizedException } from '@nestjs/common'
-import type { ConfigService } from '@nestjs/config'
-import { JwtService } from '@nestjs/jwt'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { AUTH_CHECKS_TTL_SECONDS } from '../../../../../src/modules/core/auth/auth.constants'
+import { useQuietWarnings } from '../use-quiet-warnings'
 
-import type { Env } from '../../../../src/modules/config'
-import { AuthChecksService } from '../../../../src/modules/core/auth/auth-checks.service'
-import { AUTH_CHECKS_TTL_SECONDS } from '../../../../src/modules/core/auth/auth.constants'
-import type { AuthChecks } from '../../../../src/modules/core/auth/types'
+import { ACCESS_SECRET, base64Url, checks, CHECKS_SECRET, jwt, service } from './setup'
 
-const CHECKS_SECRET = 'checks-secret-with-at-least-32-chars'
-const ACCESS_SECRET = 'access-secret-with-at-least-32-chars'
-
-const checks: AuthChecks = { state: 'expected-state', nonce: 'expected-nonce', codeVerifier: 'expected-verifier' }
-
-const configService = { get: () => CHECKS_SECRET } as unknown as ConfigService<Env, true>
-const jwt = new JwtService()
-const service = new AuthChecksService(jwt, configService)
-
-const base64Url = (value: object): string => Buffer.from(JSON.stringify(value)).toString('base64url')
-
-describe('AuthChecksService', () => {
-  const warn = vi.spyOn(Logger.prototype, 'warn')
-
-  beforeEach(() => {
-    warn.mockReset().mockImplementation(() => {
-      // keeps expected warnings out of the test output
-    })
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it('hands the checks back unchanged after signing', async () => {
-    const token = await service.sign(checks)
-
-    await expect(service.verify(token)).resolves.toEqual(checks)
-  })
-
-  it('signs a token that expires with the login window', async () => {
-    const token = await service.sign(checks)
-    const { iat, exp } = jwt.decode<{ iat: number; exp: number }>(token)
-
-    expect(exp - iat).toBe(AUTH_CHECKS_TTL_SECONDS)
-  })
+describe('AuthChecksService.verify', () => {
+  const { warn } = useQuietWarnings()
 
   it.each([undefined, ''])('rejects a missing token (%j)', async (token) => {
     await expect(service.verify(token)).rejects.toThrow(UnauthorizedException)

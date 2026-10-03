@@ -46,3 +46,4 @@ and mark the old one `Superseded by NNNN`.
 | [0007](./0007-commonjs-and-esm-only-deps.md)    | Stay CommonJS, pin or avoid ESM-only packages       | Accepted |
 | [0008](./0008-oidc-client-library.md)           | `openid-client` v6 as OIDC client, `module: node20` | Accepted |
 | [0009](./0009-login-checks-in-signed-cookie.md) | OIDC login checks in a short-lived signed cookie    | Accepted |
+| [0010](./0010-token-delivery-and-logout.md)     | Token delivery, fixed refresh expiry, IdP logout    | Accepted |

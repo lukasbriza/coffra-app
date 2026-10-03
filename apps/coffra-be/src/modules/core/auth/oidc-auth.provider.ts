@@ -6,7 +6,7 @@ import { describeError, stringOrUndefined } from '../../../utils'
 import { type Env, NodeEnv } from '../../config'
 
 import { OIDC_SCOPE } from './auth.constants'
-import type { AuthChecks, AuthProviderInterface, AuthSession, AuthUserInfo, LoginRequest } from './types'
+import type { AuthChecks, AuthProviderInterface, AuthSession, AuthUserInfo, LoginRequest, LogoutRequest } from './types'
 
 /** Generic OIDC client (any compliant IdP, not only Keycloak). See ADR 0008 for the library choice. */
 @Injectable()
@@ -98,6 +98,19 @@ export class OidcAuthProvider implements AuthProviderInterface {
       emailVerified: typeof info.email_verified === 'boolean' ? info.email_verified : undefined,
       name: stringOrUndefined(info.name),
     }
+  }
+
+  async logout(): Promise<LogoutRequest> {
+    const configuration = await this.getConfiguration()
+
+    // `end_session_endpoint` is optional in discovery: a generic OIDC provider may not have one.
+    if (!configuration.serverMetadata().end_session_endpoint) {
+      return { endSessionUrl: null }
+    }
+
+    // Only `client_id`, which the library adds. No `id_token_hint`: the ID token is not kept (ADR 0006), so the
+    // IdP asks the user to confirm. No `post_logout_redirect_uri`: there is no frontend to return to yet.
+    return { endSessionUrl: client.buildEndSessionUrl(configuration).href }
   }
 
   private getConfiguration(): Promise<client.Configuration> {

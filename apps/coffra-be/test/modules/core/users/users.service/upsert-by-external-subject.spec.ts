@@ -1,31 +1,9 @@
-import 'reflect-metadata'
+import { describe, expect, it } from 'vitest'
 
-import { Test } from '@nestjs/testing'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { row, SUBJECT, useUsersService } from './setup'
 
-import { UsersService } from '../../../../src/modules/core/users/users.service'
-import { AuthSource, PrismaService, type User } from '../../../../src/modules/prisma'
-
-const SUBJECT = 'dde84b4e-03ed-4990-a23b-e1be2e5eaf1a'
-
-const row = (overrides: Partial<User> = {}): User => ({
-  id: '0b0f7f3e-3c55-4a43-9d33-6a0c1f7f4a11',
-  email: 'dev@coffra.local',
-  authSource: AuthSource.oidc,
-  externalSubject: SUBJECT,
-  createdAt: new Date('2026-10-03T08:00:00Z'),
-  updatedAt: new Date('2026-10-03T08:00:00Z'),
-  ...overrides,
-})
-
-describe('UsersService', () => {
-  const upsert = vi.fn<(args: unknown) => Promise<User>>()
-  const prisma = { user: { upsert } } as unknown as PrismaService
-  const service = new UsersService(prisma)
-
-  beforeEach(() => {
-    upsert.mockReset()
-  })
+describe('UsersService.upsertByExternalSubject', () => {
+  const { service, upsert } = useUsersService()
 
   it('looks the user up by (authSource, externalSubject) and creates it with the identity', async () => {
     upsert.mockResolvedValue(row())
@@ -71,13 +49,5 @@ describe('UsersService', () => {
     await expect(service.upsertByExternalSubject({ subject: SUBJECT, email: 'dev@coffra.local' })).rejects.toThrow(
       'connection lost',
     )
-  })
-
-  it('resolves through Nest DI (@Inject(PrismaService) works without decorator metadata)', async () => {
-    const moduleRef = await Test.createTestingModule({
-      providers: [UsersService, { provide: PrismaService, useValue: prisma }],
-    }).compile()
-
-    expect(moduleRef.get(UsersService)).toBeInstanceOf(UsersService)
   })
 })
