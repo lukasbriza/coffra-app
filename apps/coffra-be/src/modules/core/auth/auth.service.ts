@@ -4,7 +4,7 @@ import { UsersService } from '../users/users.service'
 
 import { AuthChecksService } from './auth-checks.service'
 import { AuthTokensService } from './auth-tokens.service'
-import { AUTH_PROVIDER } from './auth.constants'
+import { AUTH_PROVIDER } from './constants'
 import type { AuthProviderInterface, AuthSession, LogoutRequest, StartedLogin, TokenPair } from './types'
 
 /**

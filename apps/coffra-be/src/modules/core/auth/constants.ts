@@ -9,3 +9,6 @@ export const AUTH_CHECKS_COOKIE = 'coffra_oidc_checks'
 
 /** How long a login may take, from the redirect to the IdP until the callback. */
 export const AUTH_CHECKS_TTL_SECONDS = 600
+
+/** Metadata key set by `@Public()` and read by `JwtAuthGuard`. */
+export const IS_PUBLIC_KEY = 'isPublic'

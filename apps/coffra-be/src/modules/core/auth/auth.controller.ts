@@ -27,14 +27,16 @@ import type { CookieOptions, Request, Response } from 'express'
 import { GLOBAL_PREFIX } from '../../../app.setup'
 import { type Env, NodeEnv } from '../../config'
 
-import { AUTH_CHECKS_COOKIE, AUTH_CHECKS_TTL_SECONDS } from './auth.constants'
 import { AuthService } from './auth.service'
+import { AUTH_CHECKS_COOKIE, AUTH_CHECKS_TTL_SECONDS } from './constants'
+import { Public } from './decorators/public.decorator'
 import { LogoutResponseDto } from './dto/logout-response.dto'
 import { RefreshTokenDto } from './dto/refresh-token.dto'
 import { TokenPairDto } from './dto/token-pair.dto'
 import type { LogoutRequest, TokenPair } from './types'
 
-// T11 marks login, callback, refresh and logout `@Public()` once the global guard exists.
+// `@Public()` goes on each method, not on the class: a route added here later stays protected until someone
+// opens it on purpose. Login and callback precede any token, refresh and logout must work with an expired one.
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -54,6 +56,7 @@ export class AuthController {
     }
   }
 
+  @Public()
   @Get('login')
   @Redirect()
   @ApiOperation({ summary: 'Start the OIDC login (authorization code + PKCE) and redirect to the identity provider' })
@@ -69,6 +72,7 @@ export class AuthController {
   }
 
   // The path must stay `/api/auth/callback`: it is the redirect URI registered at the identity provider.
+  @Public()
   @Get('callback')
   @ApiOperation({ summary: 'Finish the OIDC login: validate the response, exchange the code, issue the session' })
   @ApiOkResponse({ description: 'The access and refresh token of the user who logged in', type: TokenPairDto })
@@ -89,6 +93,7 @@ export class AuthController {
     return this.auth.completeLogin(callbackParams, typeof checksToken === 'string' ? checksToken : undefined)
   }
 
+  @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
@@ -106,6 +111,7 @@ export class AuthController {
     return this.auth.refresh(refreshToken)
   }
 
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

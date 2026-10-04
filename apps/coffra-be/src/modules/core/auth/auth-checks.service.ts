@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt'
 import { describeError, isNonEmptyString } from '../../../utils'
 import type { Env } from '../../config'
 
-import { AUTH_CHECKS_TTL_SECONDS } from './auth.constants'
+import { AUTH_CHECKS_TTL_SECONDS } from './constants'
 import type { AuthChecks } from './types'
 
 const ALGORITHM = 'HS256'

@@ -12,6 +12,8 @@ export function buildSwaggerDocument(app: INestApplication): OpenAPIObject {
     .setDescription('Personal finance overview API')
     .setVersion('1.0')
     .addBearerAuth()
+    // Every route needs the token unless it is `@Public()`, which overrides this on the operation.
+    .addSecurityRequirements('bearer')
     .build()
 
   return SwaggerModule.createDocument(app, config)

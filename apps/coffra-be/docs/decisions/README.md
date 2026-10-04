@@ -47,3 +47,4 @@ and mark the old one `Superseded by NNNN`.
 | [0008](./0008-oidc-client-library.md)           | `openid-client` v6 as OIDC client, `module: node20` | Accepted |
 | [0009](./0009-login-checks-in-signed-cookie.md) | OIDC login checks in a short-lived signed cookie    | Accepted |
 | [0010](./0010-token-delivery-and-logout.md)     | Token delivery, fixed refresh expiry, IdP logout    | Accepted |
+| [0011](./0011-global-jwt-guard.md)              | Global default-deny JWT guard, `@Public()` opt-out  | Accepted |

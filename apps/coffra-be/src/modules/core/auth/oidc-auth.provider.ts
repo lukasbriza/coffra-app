@@ -5,7 +5,7 @@ import * as client from 'openid-client'
 import { describeError, stringOrUndefined } from '../../../utils'
 import { type Env, NodeEnv } from '../../config'
 
-import { OIDC_SCOPE } from './auth.constants'
+import { OIDC_SCOPE } from './constants'
 import type { AuthChecks, AuthProviderInterface, AuthSession, AuthUserInfo, LoginRequest, LogoutRequest } from './types'
 
 /** Generic OIDC client (any compliant IdP, not only Keycloak). See ADR 0008 for the library choice. */

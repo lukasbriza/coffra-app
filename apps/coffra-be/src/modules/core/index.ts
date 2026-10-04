@@ -1,3 +1,7 @@
-export { AUTH_PROVIDER } from './auth/auth.constants'
+export { AuthTokensService } from './auth/auth-tokens.service'
+export { AUTH_PROVIDER } from './auth/constants'
+export { CurrentUser } from './auth/decorators/current-user.decorator'
+export { Public } from './auth/decorators/public.decorator'
+export { JwtAuthGuard } from './auth/jwt-auth.guard'
 export type { AuthChecks, AuthProviderInterface, AuthSession, AuthUserInfo, LoginRequest } from './auth/types'
 export { CoreModule } from './core.module'

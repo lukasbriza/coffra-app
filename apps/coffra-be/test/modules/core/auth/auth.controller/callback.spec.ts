@@ -3,7 +3,7 @@ import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 
 import { AuthTokensService } from '../../../../../src/modules/core/auth/auth-tokens.service'
-import { AUTH_CHECKS_COOKIE } from '../../../../../src/modules/core/auth/auth.constants'
+import { AUTH_CHECKS_COOKIE } from '../../../../../src/modules/core/auth/constants'
 import type { TokenPair } from '../../../../../src/modules/core/auth/types'
 
 import { checks, checksCookie, REDIRECT_URI, SUBJECT, useAuthController, user } from './setup'

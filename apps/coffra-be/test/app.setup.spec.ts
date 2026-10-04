@@ -109,6 +109,17 @@ describe('app setup', () => {
       expect(document.components?.securitySchemes).toMatchObject({ bearer: { type: 'http', scheme: 'bearer' } })
     })
 
+    it('requires the bearer token on every operation unless it is public', () => {
+      const { paths, security } = buildSwaggerDocument(app)
+
+      expect(security).toEqual([{ bearer: [] }])
+      expect(paths['/api/echo'].post?.security).toBeUndefined()
+    })
+
+    it('shows no lock on a public operation', () => {
+      expect(buildSwaggerDocument(app).paths['/api/health'].get?.security).toEqual([{}])
+    })
+
     it('serves the UI on /api/swagger', async () => {
       await request(server()).get('/api/swagger').expect(200)
     })

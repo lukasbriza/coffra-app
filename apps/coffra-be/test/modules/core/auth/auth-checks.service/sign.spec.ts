@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { AUTH_CHECKS_TTL_SECONDS } from '../../../../../src/modules/core/auth/auth.constants'
+import { AUTH_CHECKS_TTL_SECONDS } from '../../../../../src/modules/core/auth/constants'
 import { useQuietWarnings } from '../use-quiet-warnings'
 
 import { checks, jwt, service } from './setup'

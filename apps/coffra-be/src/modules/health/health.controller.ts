@@ -2,6 +2,8 @@ import { Controller, Get, Inject } from '@nestjs/common'
 import { ApiOkResponse, ApiServiceUnavailableResponse, ApiTags } from '@nestjs/swagger'
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus'
 
+import { Public } from '../core'
+
 import { PrismaHealthIndicator } from './prisma.health'
 
 const healthResultSchema = {
@@ -14,6 +16,7 @@ const healthResultSchema = {
   },
 }
 
+@Public()
 @ApiTags('health')
 @Controller('health')
 export class HealthController {

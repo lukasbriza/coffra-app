@@ -1,7 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 
-import { AUTH_CHECKS_TTL_SECONDS } from '../../../../../src/modules/core/auth/auth.constants'
+import { AUTH_CHECKS_TTL_SECONDS } from '../../../../../src/modules/core/auth/constants'
 import { useQuietWarnings } from '../use-quiet-warnings'
 
 import { ACCESS_SECRET, base64Url, checks, CHECKS_SECRET, jwt, service } from './setup'

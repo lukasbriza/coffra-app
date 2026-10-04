@@ -1,3 +1,5 @@
+import type { Request } from 'express'
+
 /**
  * Values the caller must keep between `login` and the callback. The provider is stateless:
  * where they are stored (e.g. a short-lived signed cookie) is the caller's decision.
@@ -37,6 +39,9 @@ export type VerifiedAccessToken = {
 export type VerifiedRefreshToken = VerifiedAccessToken & {
   expiresAt: number
 }
+
+/** The request after `JwtAuthGuard`: `auth` is set on every route that is not `@Public()`. */
+export type AuthenticatedRequest = Request & { auth?: VerifiedAccessToken }
 
 /** Where to send the browser to end the session at the IdP. */
 export type LogoutRequest = {

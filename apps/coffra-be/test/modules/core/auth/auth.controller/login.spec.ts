@@ -2,7 +2,7 @@ import { ServiceUnavailableException } from '@nestjs/common'
 import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 
-import { AUTH_CHECKS_TTL_SECONDS } from '../../../../../src/modules/core/auth/auth.constants'
+import { AUTH_CHECKS_TTL_SECONDS } from '../../../../../src/modules/core/auth/constants'
 
 import { AUTHORIZATION_URL, checksCookie, useAuthController } from './setup'
 
