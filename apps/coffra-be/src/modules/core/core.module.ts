@@ -1,5 +1,10 @@
 import { Module } from '@nestjs/common'
 
-// Auth, users and ownership land here (T7–T13).
-@Module({})
+import { AuthModule } from './auth/auth.module'
+import { UsersModule } from './users/users.module'
+
+// Each feature of the domain is its own module (auth, users, later ownership: T13), wired in here.
+@Module({
+  imports: [AuthModule, UsersModule],
+})
 export class CoreModule {}

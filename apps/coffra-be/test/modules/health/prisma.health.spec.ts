@@ -3,8 +3,8 @@ import 'reflect-metadata'
 import { HealthIndicatorService } from '@nestjs/terminus'
 import { describe, expect, it, vi } from 'vitest'
 
-import { PrismaHealthIndicator } from '../src/modules/health/prisma.health'
-import type { PrismaService } from '../src/modules/prisma/prisma.service'
+import { PrismaHealthIndicator } from '../../../src/modules/health/prisma.health'
+import type { PrismaService } from '../../../src/modules/prisma/prisma.service'
 
 const build = (queryRaw: () => Promise<unknown>) => {
   const prisma = { $queryRaw: vi.fn(queryRaw) } as unknown as PrismaService
