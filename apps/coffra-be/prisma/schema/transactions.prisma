@@ -24,6 +24,9 @@ enum TransferDirection {
 model Account {
   id        String      @id @default(uuid()) @db.Uuid
   userId    String      @db.Uuid
+  /// Future workspace of the row (multitenancy). Always NULL in the MVP: nothing writes or reads it,
+  /// ownership goes through `userId`. No foreign key until the `Workspace` table exists.
+  tenantId  String?     @db.Uuid
   name      String
   type      AccountType
   currency  String      @db.Char(3)
@@ -44,6 +47,8 @@ model Account {
 model Category {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @db.Uuid
+  /// Future workspace of the row, always NULL in the MVP (see `Account.tenantId`).
+  tenantId  String?  @db.Uuid
   /// Unique per user.
   name      String
   createdAt DateTime @default(now())
