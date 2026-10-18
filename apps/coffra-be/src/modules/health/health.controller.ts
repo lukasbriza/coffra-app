@@ -17,8 +17,9 @@ const healthResultSchema = {
 }
 
 @Public()
-@ApiTags('health')
 @Controller('health')
+// Swagger
+@ApiTags('health')
 export class HealthController {
   constructor(
     @Inject(HealthCheckService) private readonly health: HealthCheckService,
@@ -27,6 +28,7 @@ export class HealthController {
 
   @Get()
   @HealthCheck()
+  // Swagger
   @ApiOkResponse({ description: 'All checks passed', schema: healthResultSchema })
   @ApiServiceUnavailableResponse({ description: 'At least one check failed', schema: healthResultSchema })
   check() {

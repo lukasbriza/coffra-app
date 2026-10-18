@@ -37,8 +37,9 @@ import type { LogoutRequest, TokenPair } from './types'
 
 // `@Public()` goes on each method, not on the class: a route added here later stays protected until someone
 // opens it on purpose. Login and callback precede any token, refresh and logout must work with an expired one.
-@ApiTags('auth')
 @Controller('auth')
+// Swagger
+@ApiTags('auth')
 export class AuthController {
   /** Shared by setting and clearing the cookie: a cookie is only cleared by the same `path`. */
   private readonly cookieOptions: CookieOptions
@@ -59,6 +60,7 @@ export class AuthController {
   @Public()
   @Get('login')
   @Redirect()
+  // Swagger
   @ApiOperation({ summary: 'Start the OIDC login (authorization code + PKCE) and redirect to the identity provider' })
   @ApiFoundResponse({ description: 'Redirect to the identity provider, sets the short-lived login checks cookie' })
   @ApiServiceUnavailableResponse({ description: 'The identity provider is unavailable' })
@@ -74,6 +76,7 @@ export class AuthController {
   // The path must stay `/api/auth/callback`: it is the redirect URI registered at the identity provider.
   @Public()
   @Get('callback')
+  // Swagger
   @ApiOperation({ summary: 'Finish the OIDC login: validate the response, exchange the code, issue the session' })
   @ApiOkResponse({ description: 'The access and refresh token of the user who logged in', type: TokenPairDto })
   @ApiUnauthorizedResponse({
@@ -97,6 +100,7 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
+  // Swagger
   @ApiOperation({
     summary: 'Swap a refresh token for a new token pair',
     description:
@@ -114,6 +118,7 @@ export class AuthController {
   @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
+  // Swagger
   @ApiOperation({
     summary: 'Get the URL that ends the session at the identity provider',
     description:

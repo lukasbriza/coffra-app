@@ -7,12 +7,14 @@ import { UserDto } from './dto/user.dto'
 import { UsersService } from './users.service'
 import type { UserProfile } from './users.types'
 
-@ApiTags('users')
 @Controller('users')
+// Swagger
+@ApiTags('users')
 export class UsersController {
   constructor(@Inject(UsersService) private readonly users: UsersService) {}
 
   @Get('me')
+  // Swagger
   @ApiOperation({ summary: 'The user the access token was issued to' })
   @ApiOkResponse({ description: 'The signed-in user', type: UserDto })
   @ApiUnauthorizedResponse({

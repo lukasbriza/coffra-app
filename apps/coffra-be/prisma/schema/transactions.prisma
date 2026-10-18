@@ -22,16 +22,20 @@ enum TransferDirection {
 /// Place where money is held (bank account, cash). Owned by one user, has a single currency.
 /// Deleting an account that still has transactions is forbidden.
 model Account {
-  id        String      @id @default(uuid()) @db.Uuid
-  userId    String      @db.Uuid
+  id             String      @id @default(uuid()) @db.Uuid
+  userId         String      @db.Uuid
   /// Future workspace of the row (multitenancy). Always NULL in the MVP: nothing writes or reads it,
   /// ownership goes through `userId`. No foreign key until the `Workspace` table exists.
-  tenantId  String?     @db.Uuid
-  name      String
-  type      AccountType
-  currency  String      @db.Char(3)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  tenantId       String?     @db.Uuid
+  name           String
+  type           AccountType
+  /// Set when the account is created and never changed: the amounts of its transactions are in it.
+  currency       String      @db.Char(3)
+  /// Balance before the first recorded transaction, in the account currency. May be negative (overdraft,
+  /// credit card) and may be corrected later. Not a transaction: it never counts as income.
+  openingBalance Decimal     @default(0) @db.Decimal(19, 4)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   // Foreign key side: `userId` is the real column, `user` is only a virtual field for queries.
   // Cascade: deleting the user deletes their accounts.

@@ -25,6 +25,25 @@ covers only what is specific to a NestJS app.
   - An app booted without that `main.ts` line has no authentication (`configureApp` does not add it): a test or e2e bootstrap that needs the guard repeats that line itself.
   - A new endpoint needs nothing to be protected. Do not put `@UseGuards` or `@ApiBearerAuth()` on it: both are already global.
 - `src/modules/core/users/` — `UsersModule`: `UsersService.upsertByExternalSubject` finds or creates the `User` by `(oidc, sub)` (never by email) and keeps the email in sync; `findById` serves the token refresh and `GET /api/users/me` (`UsersController`: `{ id, email }` of the token's user, 401 when it no longer exists). The service is exported to `AuthModule`, not through the domain barrel.
+- `src/modules/core/ownership/` — `OwnershipModule` (ADR 0012): the one place that decides whose rows a request sees. `OwnershipService` runs no query; the domain spreads its pieces into its own Prisma calls, so a foreign row is never found and ends like a missing one (`404 <Resource> not found`, same body, never `403`). A domain module imports `OwnershipModule` from the `core` barrel, not `CoreModule` (that would boot auth), and injects `@Inject(OwnershipService)`.
+  - `@CurrentOwner() owner: Owner` is for data (every route of `transactions` and `dashboard`); `@CurrentUser()` is for the identity of the caller only (`GET /api/users/me`). A domain service takes `owner: Owner`, never a `userId`, and never reads its fields: with workspaces the owner changes, the service signatures do not.
+  - Usage (the review rule: **every** query on `account`, `category` and `transaction` spreads `ownership.scope(owner)`, writes included; `findUnique({ where: { id } })` in a domain is a red flag; the domain never writes `userId` into a `where` or `data` itself):
+
+    ```ts
+    this.prisma.account.findMany({ where: this.ownership.scope(owner) })
+    this.ownership.orNotFound(
+      await this.prisma.account.findFirst({ where: { id, ...this.ownership.scope(owner) } }),
+      'Account',
+    )
+    this.prisma.account.create({ data: { ...fields, ...this.ownership.ownerData(owner) } })
+    this.prisma.transaction.findMany({ where: { account: this.ownership.scope(owner), ...filters } }) // child model: through its parent
+    ```
+
+  - One owner per request: an account and a category are checked to belong together by reading both through the same scope.
+  - `Account` and `Category` carry a nullable `tenantId` (always `NULL`, nothing writes or reads it). **Never return a Prisma row from a controller**: map it to a view type, otherwise `userId` and `tenantId` leak into the API.
+  - `test/modules/core/ownership/foreign-equals-missing.spec.ts` proves the composition over HTTP; `test/modules/transactions/owner-scope.spec.ts` is a compile-time contract (`pnpm ts`) that the scope fits the `transactions` models.
+- `src/modules/transactions/accounts/` — `AccountsModule` (imports `OwnershipModule`): `POST/GET/GET :id/PATCH/DELETE /api/accounts`, the reference CRUD for the rest of the domain (see CRUD conventions). `openingBalance` is a column, not a transaction; the currency is set on create only and a `PATCH` with `currency` is a 400 (ADR 0013). Deleting an account with transactions is a 409 decided by the `Restrict` of the database, not by a count beforehand.
+- `src/modules/transactions/common/` — what the features of `transactions` share: `constants.ts` (`MONEY_SCALE`, `SIGNED_DECIMAL_PATTERN`, `RESOURCE_NAME_MAX_LENGTH`), `formatMoney`, `decorators/` (`@IsDecimalAmount()`, `@IsResourceName()`). Moves to `src/utils` once a second domain needs it.
 - A feature inside a domain (`core/auth`, `core/users`, ...) is its own Nest module, `<feature>.module.ts`, imported by the domain module. The feature module is internal: only the domain's `index.ts` is public.
 - Infrastructure modules (not domains): `src/modules/{config,health,prisma}/`, each with an `index.ts`.
 - `src/utils/` — project-wide pure helpers (no Nest, no domain imports), one function per file, the file is the kebab-case of the function name (`stringOrUndefined` → `string-or-undefined.ts`, the shared ESLint enforces kebab-case filenames), all re-exported from the `index.ts` barrel and imported through it (`'../../../utils'`). Put a helper here once a second domain needs it, or when it is generic by nature.
@@ -55,9 +74,37 @@ code later can see **why** something was built that way, not only what it does.
 - Write it in the same PR as the change, and add it to the index.
 - Do not rewrite an accepted decision. To change course, add a new record and mark the old one `Superseded by NNNN`.
 
+## CRUD conventions
+
+Set by `transactions/accounts` (T14); categories, transactions and transfers follow them.
+
+- **Layout:** `<feature>/` with `<feature>.module.ts`, `<feature>.controller.ts`, `<feature>.service.ts`, `<feature>.types.ts` (`<Model>View`, `Create<Model>Input`, `Update<Model>Input`), `<feature>.mapper.ts` (`to<Model>View`) and `dto/` (`<model>.dto.ts` for Swagger, `create-<model>.dto.ts`, `update-<model>.dto.ts`). The controller only passes `@CurrentOwner() owner: Owner` and the DTO on; the service takes `owner` and an input type (the DTO `implements` it).
+- **Status codes:** `POST` `201` with the resource, `GET` `200`, `PATCH` `200` with the whole resource, `DELETE` `204` with no body (`@HttpCode(HttpStatus.NO_CONTENT)`). `400` for invalid input, including an id in the path that is not a UUID (`@Param('id', ParseUUIDPipe)` on every `:id`: any well-formed UUID goes on to the lookup, so the database never sees a malformed one). `404` for a missing **or** foreign id, only through `ownership.orNotFound`. `409` for a conflict of state (`Restrict`, a unique constraint, a domain rule). The guard answers `401` before any pipe runs.
+- **Responses:** always a `<Model>View` built by the mapper in `<feature>.mapper.ts` (`toAccountView`: a pure function, no DI, listed fields only, with its own spec), never a Prisma row (`userId`, `tenantId`, timestamps stay inside). Swagger documents every response code of the operation.
+- **Money:** in as a decimal string through `@IsDecimalAmount()` (a JSON number, an exponent, more than 4 decimal places or more than 15 integer digits is a `400`, so nothing overflows `Decimal(19,4)` into a `500`); out through `formatMoney` with exactly four decimal places. Prisma takes the string as it is.
+- **Validation before the database:** every CHECK constraint has a DTO rule that fires first (the currency regex is the one of `currency_iso`), so a constraint is a last line of defence, never the answer to a client.
+- **Names:** `@IsResourceName()` (trimmed, non-empty, at most 100 characters).
+- **Optional fields and `null`:** an optional field of a create DTO uses `@ValidateIf((_dto, value) => value !== undefined)`, not `@IsOptional()` (that lets `null` through to a NOT NULL column, a `500`). The update DTO is `PartialType(CreateDto, { skipNullProperties: false })` for the same reason. `null` is accepted only for a nullable column, explicitly. A field that must not change is declared on the update DTO only to be refused (`@Equals(undefined, …)` + `@ApiHideProperty()`): the global `whitelist` would otherwise drop it silently and answer `200`.
+- **Prisma `data` from optional input:** `omitUndefined({ … })` (`src/utils`), because `exactOptionalPropertyTypes` does not accept an explicit `undefined`. List the fields by name; never spread a DTO into `data`.
+- **Prisma errors** are mapped in the service, where the meaning of the code for that operation is known: `isPrismaError(error, PrismaErrorCode.X)` from the `prisma` barrel (`P2003` is a `409` on deleting an account with transactions but a `401` on creating an account for a deleted user; `P2025` after a scoped read is the same `404`). Anything else is rethrown and ends as a `500` in the log. No global exception filter. With `@prisma/adapter-pg` a foreign key violation does arrive as `PrismaClientKnownRequestError` `P2003` (verified against the dev Postgres).
+- **Reads before writes:** `update`/`delete` first run the scoped read (`findOwned`: `findFirst` + `orNotFound`), then write with the scope again (`where: { id, ...scope }`).
+- **Lists:** a stable order (a unique tie-breaker such as `id` after the sort column).
+- **Tests:** the service over a mocked Prisma and the real `OwnershipService` (pins the `where`, the `data` and the error mapping); the controller behind the real guard and `configureApp` with a mocked service (status codes, validation table with `it.each`, the owner from the token, the body cannot choose the owner). Isolation through real queries is T20.
+
 ## Conventions
 
 - One module per feature; keep controllers thin, logic in services (DI).
+- **Swagger decorators sit apart from the functional ones**, on a class and on a method alike: first what changes behaviour (`@Controller`, the route, `@HttpCode`, `@Header`, `@Redirect`, `@Public()`, `@HealthCheck()`), then a `// Swagger` comment line, then only documentation (`@ApiTags`, `@ApiOperation`, `@Api…Response`, `@ApiParam`). Everything below `// Swagger` can be removed without changing what the API does. A decorator that does both (`@Public()`) counts as functional. Nest and Swagger do not depend on the order.
+
+  ```ts
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  // Swagger
+  @ApiOperation({ summary: 'Delete an account that has no transactions' })
+  @ApiNoContentResponse({ description: 'Deleted' })
+  remove(…) {}
+  ```
+
 - DTOs validated with `class-validator`; enable a global `ValidationPipe` when adding input.
 - All routes live under the `api` prefix. New endpoint tests must boot via `configureApp(app)`.
 - **Ports get the `Interface` suffix** (`AuthProviderInterface`): an interface that classes implement and callers depend on. Plain data shapes (`AuthSession`, `LoginRequest`) do not.

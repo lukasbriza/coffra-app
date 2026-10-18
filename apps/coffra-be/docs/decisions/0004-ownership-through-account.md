@@ -28,4 +28,4 @@ not a rewrite of every query.
 
 - The DB does not guarantee that a transaction's category belongs to the same user as its account. The service must check it (and the ownership layer must support this).
 - Listing a user's transactions goes through the account relation.
-- The planned `tenantId` / `workspaceId` is not in the schema yet; see the open question in `docs/01_tasks.md`.
+- `Account` and `Category` carry a nullable `tenantId` since T13 (always `NULL` in the MVP); the ownership layer and the path to workspaces are in [0012](./0012-ownership-layer.md).
