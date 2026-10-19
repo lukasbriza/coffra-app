@@ -28,7 +28,7 @@ describe('@IsDecimalAmount()', () => {
     '999999999999999.9999',
     '-999999999999999.9999',
   ])('accepts %j', async (amount) => {
-    expect(await errorsOf(amount)).toEqual([])
+    await expect(errorsOf(amount)).resolves.toEqual([])
   })
 
   it.each([
@@ -51,7 +51,7 @@ describe('@IsDecimalAmount()', () => {
     ['NaN', 'NaN'],
     ['Infinity', 'Infinity'],
   ])('refuses %s', async (_name, amount) => {
-    expect(await errorsOf(amount)).toEqual([
+    await expect(errorsOf(amount)).resolves.toEqual([
       'amount must be a decimal string with at most 15 integer digits and 4 decimal places',
     ])
   })

@@ -154,7 +154,8 @@ export class FakeIdp {
           return
         }
         case 'POST /token': {
-          await this.token(await readBody(request), request, response)
+          const body = await readBody(request)
+          await this.token(body, request, response)
           return
         }
         case 'GET /userinfo': {

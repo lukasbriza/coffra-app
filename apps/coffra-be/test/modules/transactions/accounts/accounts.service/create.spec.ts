@@ -40,7 +40,7 @@ describe('AccountsService.create', () => {
   it('returns the view of the created row', async () => {
     create.mockResolvedValue(row())
 
-    expect(await service.create(OWNER, INPUT)).toStrictEqual(VIEW)
+    await expect(service.create(OWNER, INPUT)).resolves.toStrictEqual(VIEW)
   })
 
   it('answers 401 when the owner no longer exists (foreign key to the user)', async () => {

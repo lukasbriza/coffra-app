@@ -118,7 +118,8 @@ describe('a login that is refused', () => {
     const checks = { state: 'state', nonce: 'nonce', codeVerifier: 'verifier' }
 
     it('is refused when the browser sends none', async () => {
-      const response = await e2e.callbackWithCookie(await freshCallbackUrl())
+      const callbackUrl = await freshCallbackUrl()
+      const response = await e2e.callbackWithCookie(callbackUrl)
 
       expectRefused(response, COOKIE_REJECTED, 'Login checks cookie is missing')
     })
@@ -128,16 +129,15 @@ describe('a login that is refused', () => {
       ['signed with the refresh secret', () => forgedCookie(REFRESH_SECRET, checks)],
       ['not a token at all', () => 'coffra_oidc_checks=garbage'],
     ])('is refused when it is %s', async (_name, cookie) => {
-      const response = await e2e.callbackWithCookie(await freshCallbackUrl(), cookie())
+      const callbackUrl = await freshCallbackUrl()
+      const response = await e2e.callbackWithCookie(callbackUrl, cookie())
 
       expectRefused(response, COOKIE_REJECTED, 'Login checks cookie rejected (')
     })
 
     it('is refused when it is signed correctly but does not carry the checks', async () => {
-      const response = await e2e.callbackWithCookie(
-        await freshCallbackUrl(),
-        forgedCookie(CHECKS_SECRET, { state: 'state' }),
-      )
+      const callbackUrl = await freshCallbackUrl()
+      const response = await e2e.callbackWithCookie(callbackUrl, forgedCookie(CHECKS_SECRET, { state: 'state' }))
 
       expectRefused(response, COOKIE_REJECTED, 'Login checks cookie has an unexpected shape')
     })

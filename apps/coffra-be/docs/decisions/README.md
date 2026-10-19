@@ -50,3 +50,4 @@ and mark the old one `Superseded by NNNN`.
 | [0011](./0011-global-jwt-guard.md)                   | Global default-deny JWT guard, `@Public()` opt-out                | Accepted |
 | [0012](./0012-ownership-layer.md)                    | Ownership layer: owner scope in the query, foreign equals missing | Accepted |
 | [0013](./0013-opening-balance-and-fixed-currency.md) | Opening balance as an account field, currency fixed at creation   | Accepted |
+| [0014](./0014-category-names-and-delete.md)          | Category names unique and case-sensitive, used category kept      | Accepted |

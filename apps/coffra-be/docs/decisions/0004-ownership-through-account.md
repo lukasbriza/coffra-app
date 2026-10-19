@@ -18,7 +18,7 @@ not a rewrite of every query.
 - Delete behaviour:
   - deleting a user cascades to their accounts and categories;
   - an account that still has transactions cannot be deleted (`Restrict`, the API should answer 409);
-  - deleting a category keeps its transactions and sets `categoryId` to null (`SetNull`).
+  - deleting a category keeps its transactions and sets `categoryId` to null (`SetNull`). _Changed by [0014](./0014-category-names-and-delete.md): a category that still has transactions cannot be deleted (`Restrict`, 409)._
 
 ## Alternatives considered
 

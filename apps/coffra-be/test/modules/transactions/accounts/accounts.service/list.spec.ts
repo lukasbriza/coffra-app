@@ -36,7 +36,7 @@ describe('AccountsService.list', () => {
     })
     findMany.mockResolvedValue([row(), second])
 
-    expect(await service.list(OWNER)).toStrictEqual([
+    await expect(service.list(OWNER)).resolves.toStrictEqual([
       VIEW,
       { id: second.id, name: 'Wallet', type: 'cash', currency: 'CZK', openingBalance: '-20.0000' },
     ])
@@ -45,6 +45,6 @@ describe('AccountsService.list', () => {
   it('returns an empty list for an owner without accounts', async () => {
     findMany.mockResolvedValue([])
 
-    expect(await service.list(OWNER)).toEqual([])
+    await expect(service.list(OWNER)).resolves.toEqual([])
   })
 })

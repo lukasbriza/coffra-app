@@ -40,7 +40,7 @@ describe('AccountsService.update', () => {
   it('returns the view of the changed row', async () => {
     update.mockResolvedValue(row({ name: 'Savings', openingBalance: new Prisma.Decimal('-20') }))
 
-    expect(await service.update(OWNER, ACCOUNT_ID, { name: 'Savings', openingBalance: '-20' })).toStrictEqual({
+    await expect(service.update(OWNER, ACCOUNT_ID, { name: 'Savings', openingBalance: '-20' })).resolves.toStrictEqual({
       id: ACCOUNT_ID,
       name: 'Savings',
       type: 'bank',

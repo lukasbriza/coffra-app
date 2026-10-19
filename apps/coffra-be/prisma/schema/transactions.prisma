@@ -47,7 +47,7 @@ model Account {
 }
 
 /// User-defined category for income/expense transactions. A transaction has at most one category.
-/// Deleting a category keeps its transactions and sets their `categoryId` to null.
+/// A category that still has transactions cannot be deleted.
 model Category {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @db.Uuid
@@ -90,9 +90,9 @@ model Transaction {
   // these two models, so no relation name is needed.
   // Restrict: an account that still has transactions cannot be deleted.
   account  Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  // Optional (`?`) because SetNull needs a nullable FK: deleting the category keeps the
-  // transaction and nulls `categoryId`.
-  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  // Optional (`?`): a transaction may have no category, a transfer never has one.
+  // Restrict: a category that still has transactions cannot be deleted.
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   @@unique([transferPairId, transferDirection])
   @@index([accountId])

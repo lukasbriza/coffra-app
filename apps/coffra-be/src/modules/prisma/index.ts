@@ -1,5 +1,5 @@
 export { Prisma } from './generated/client'
-export type { Account, User } from './generated/client'
+export type { Account, Category, User } from './generated/client'
 export { AccountType, AuthSource } from './generated/enums'
 export { isPrismaError } from './is-prisma-error'
 export { PrismaErrorCode } from './prisma.constants'

@@ -10,6 +10,8 @@ import { AccountsService } from '../../../../../src/modules/transactions/account
 // Shared by the use case specs of `AccountsService` (list, findOne, create, update, remove). The ownership layer is
 // the real one: the specs pin the `where` it produces, not a mock of it.
 
+export { prismaError } from '../../prisma-error'
+
 export const OWNER: Owner = { userId: '0b0f7f3e-3c55-4a43-9d33-6a0c1f7f4a11' }
 export const ACCOUNT_ID = '5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d'
 
@@ -37,9 +39,6 @@ export const VIEW = {
   currency: 'CZK',
   openingBalance: '1250.5000',
 }
-
-export const prismaError = (code: string): Prisma.PrismaClientKnownRequestError =>
-  new Prisma.PrismaClientKnownRequestError(`query failed with ${code}`, { code, clientVersion: '7.8.0' })
 
 /**
  * The service over a mocked Prisma and the real ownership layer. Call it inside a `describe`: it registers the

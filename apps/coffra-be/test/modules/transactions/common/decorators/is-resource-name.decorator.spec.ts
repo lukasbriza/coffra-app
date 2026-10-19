@@ -25,24 +25,24 @@ const errorsOf = async (name: unknown): Promise<string[]> => {
 
 describe('@IsResourceName()', () => {
   it('accepts a name and keeps it as it is', async () => {
-    expect(await check('Main account')).toStrictEqual({ name: 'Main account', errors: [] })
+    await expect(check('Main account')).resolves.toStrictEqual({ name: 'Main account', errors: [] })
   })
 
   it('trims the name before it is validated and stored', async () => {
-    expect(await check('  Food \n')).toStrictEqual({ name: 'Food', errors: [] })
+    await expect(check('  Food \n')).resolves.toStrictEqual({ name: 'Food', errors: [] })
   })
 
   it('accepts 100 characters and refuses 101, counted after trimming', async () => {
-    expect(await errorsOf('a'.repeat(100))).toEqual([])
-    expect(await errorsOf(` ${'a'.repeat(100)} `)).toEqual([])
-    expect(await errorsOf('a'.repeat(101))).toEqual(['maxLength'])
+    await expect(errorsOf('a'.repeat(100))).resolves.toEqual([])
+    await expect(errorsOf(` ${'a'.repeat(100)} `)).resolves.toEqual([])
+    await expect(errorsOf('a'.repeat(101))).resolves.toEqual(['maxLength'])
   })
 
   it.each(['', ' '.repeat(3), '\t\n'])('refuses the blank name %j', async (name) => {
-    expect(await errorsOf(name)).toEqual(['isNotEmpty'])
+    await expect(errorsOf(name)).resolves.toEqual(['isNotEmpty'])
   })
 
   it.each([42, null, undefined, ['Food'], { name: 'Food' }])('refuses %j', async (name) => {
-    expect(await errorsOf(name)).toContain('isString')
+    await expect(errorsOf(name)).resolves.toContain('isString')
   })
 })

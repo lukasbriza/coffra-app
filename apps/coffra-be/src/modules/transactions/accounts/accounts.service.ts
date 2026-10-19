@@ -27,7 +27,9 @@ export class AccountsService {
   }
 
   async findOne(owner: Owner, id: string): Promise<AccountView> {
-    return toAccountView(await this.findOwned(owner, id))
+    const row = await this.findOwned(owner, id)
+
+    return toAccountView(row)
   }
 
   async create(owner: Owner, { name, type, currency, openingBalance }: CreateAccountInput): Promise<AccountView> {

@@ -13,7 +13,7 @@ describe('AccountsService.findOne', () => {
   })
 
   it('returns the view of the account', async () => {
-    expect(await service.findOne(OWNER, ACCOUNT_ID)).toStrictEqual(VIEW)
+    await expect(service.findOne(OWNER, ACCOUNT_ID)).resolves.toStrictEqual(VIEW)
   })
 
   it('answers 404 Account not found when the scoped query finds nothing (missing or foreign)', async () => {

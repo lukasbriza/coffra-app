@@ -50,7 +50,8 @@ describe('JwtAuthGuard with a missing or invalid access token', () => {
   ]
 
   it.each(cases)('answers 401 for %s', async (_name, authorization) => {
-    const response = await get('/api/probe', await authorization()).expect(401)
+    const header = await authorization()
+    const response = await get('/api/probe', header).expect(401)
 
     expect((response.body as { message: string }).message).toBe(REJECTION_MESSAGE)
     expect(response.headers['www-authenticate']).toBe('Bearer')
