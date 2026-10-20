@@ -1,6 +1,6 @@
 export { Prisma } from './generated/client'
-export type { Account, Category, User } from './generated/client'
-export { AccountType, AuthSource } from './generated/enums'
+export type { Account, Category, Transaction, User } from './generated/client'
+export { AccountType, AuthSource, TransactionType, TransferDirection } from './generated/enums'
 export { isPrismaError } from './is-prisma-error'
 export { PrismaErrorCode } from './prisma.constants'
 export { PrismaModule } from './prisma.module'

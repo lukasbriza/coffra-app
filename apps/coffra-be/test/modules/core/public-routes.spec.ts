@@ -105,14 +105,17 @@ describe('the public routes of the API', () => {
   })
 
   describe('the global guard', () => {
-    it.each(['/api/probe', '/api/users/me', '/api/accounts', '/api/categories'])(
-      'turns %s away without a token',
-      async (path) => {
-        const response = await request(server()).get(path).expect(401)
+    it.each([
+      '/api/probe',
+      '/api/users/me',
+      '/api/accounts',
+      '/api/categories',
+      '/api/transactions/9a8b7c6d-5e4f-4a3b-9c2d-1e0f2a3b4c5d',
+    ])('turns %s away without a token', async (path) => {
+      const response = await request(server()).get(path).expect(401)
 
-        expect(response.headers['www-authenticate']).toBe('Bearer')
-      },
-    )
+      expect(response.headers['www-authenticate']).toBe('Bearer')
+    })
   })
 
   describe('are reachable without a token', () => {

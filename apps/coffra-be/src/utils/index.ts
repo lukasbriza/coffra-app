@@ -1,5 +1,7 @@
 export { describeError } from './describe-error'
 export { extractBearerToken } from './extract-bearer-token'
+export { formatIsoDate } from './format-iso-date'
 export { isNonEmptyString } from './is-non-empty-string'
 export { omitUndefined } from './omit-undefined'
+export { parseIsoDate } from './parse-iso-date'
 export { stringOrUndefined } from './string-or-undefined'
