@@ -11,7 +11,6 @@ says when to write one and how.
 
 - **Status:** Proposed | Accepted | Superseded by NNNN
 - **Date:** YYYY-MM-DD
-- **Milestone / task:** M0, #12
 
 ## Context
 
@@ -52,3 +51,4 @@ and mark the old one `Superseded by NNNN`.
 | [0013](./0013-opening-balance-and-fixed-currency.md) | Opening balance as an account field, currency fixed at creation   | Accepted |
 | [0014](./0014-category-names-and-delete.md)          | Category names unique and case-sensitive, used category kept      | Accepted |
 | [0015](./0015-income-and-expense-transactions.md)    | Transactions: scoped reference reads, read-only transfer sides    | Accepted |
+| [0016](./0016-transactions-list.md)                  | Transactions list: keyset cursor, filters as predicates, indexes  | Accepted |

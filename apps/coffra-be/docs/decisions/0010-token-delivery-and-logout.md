@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-03
-- **Milestone / task:** M1, #13 (T10)
 
 ## Context
 
@@ -29,10 +28,10 @@ There is no frontend yet. The clients are Swagger, scripts and, later, a web app
 
 ## Consequences
 
-- The client has to do two things on logout, or the session at the IdP survives: drop the tokens and navigate to `endSessionUrl`. Swagger and the PR describe it.
+- The client has to do two things on logout, or the session at the IdP survives: drop the tokens and navigate to `endSessionUrl`. Swagger describes it.
 - A refresh token still cannot be revoked and a refresh does not invalidate the old one ("rotation" is formal, there is no reuse detection without state). The only levers are deleting the `User` and rotating `JWT_REFRESH_SECRET`, which ends every session.
 - Without `id_token_hint` Keycloak asks the user to confirm the logout, and without `post_logout_redirect_uri` the user stays on a Keycloak page. A web frontend adds an optional `OIDC_POST_LOGOUT_REDIRECT_URI`, registers it as `post.logout.redirect.uris` on the client and may decide about `id_token_hint` then.
 - A web frontend that keeps the tokens in JavaScript exposes the refresh token to XSS. That is the point to revisit the cookie variant, in a new decision.
 - The access token may outlive the end of the session by up to `JWT_ACCESS_TTL_SECONDS` (a refresh just before the end still issues a full access lifetime).
 - Changing a TTL in the config only affects tokens issued afterwards.
-- `refresh` and `logout` carry no access token, so T11 marks both `@Public()` next to login and callback.
+- `refresh` and `logout` carry no access token, so both are marked `@Public()` next to login and callback.

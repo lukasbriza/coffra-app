@@ -1,6 +1,8 @@
 import type { OwnerScope } from '../../core'
 import type { Account, Transaction, TransactionType, TransferDirection } from '../../prisma'
 
+import type { LIST_ORDERS } from './constants'
+
 /** The types of a transaction this API creates and changes; a transfer has an API of its own. */
 export type IncomeExpenseType = Exclude<TransactionType, 'transfer'>
 
@@ -53,4 +55,46 @@ export type OwnedTransaction = Transaction & { account: Pick<Account, 'currency'
 export type EditableScope = {
   account: OwnerScope
   type: { in: IncomeExpenseType[] }
+}
+
+/** The direction of the list over its sort key `(date, createdAt, id)`. */
+export type ListOrder = (typeof LIST_ORDERS)[number]
+
+/** A position in the list: the sort key of the last row of a page, and the order it was issued for. */
+export type ListCursor = {
+  order: ListOrder
+  /** Calendar day `YYYY-MM-DD`. */
+  date: string
+  /** ISO timestamp in UTC with milliseconds, e.g. `2026-10-19T08:00:00.123Z`. */
+  createdAt: string
+  id: string
+}
+
+/** The filters and the position of a list; a filter left out matches every row. */
+export type ListTransactionsInput = {
+  accountId?: string
+  categoryId?: string
+  type?: TransactionType
+  /** First day, inclusive, `YYYY-MM-DD`. */
+  from?: string
+  /** Last day, inclusive, `YYYY-MM-DD`. */
+  to?: string
+  order: ListOrder
+  /** Most transactions on the page. */
+  limit: number
+  /** Left out: the first page. */
+  cursor?: ListCursor
+}
+
+/** One page of the list, in the requested order. */
+export type TransactionPage = {
+  items: TransactionView[]
+  /** The `cursor` of the next page; `null` on the last one. */
+  nextCursor: string | null
+}
+
+/** Prisma filter of the `date` column for a range of days, each end left out when the range is open there. */
+export type DateRange = {
+  gte?: Date
+  lte?: Date
 }

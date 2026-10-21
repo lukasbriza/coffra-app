@@ -2,7 +2,10 @@ import { beforeEach, vi } from 'vitest'
 
 import { TransactionsController } from '../../../../../src/modules/transactions/transactions/transactions.controller'
 import { TransactionsService } from '../../../../../src/modules/transactions/transactions/transactions.service'
-import type { TransactionView } from '../../../../../src/modules/transactions/transactions/transactions.types'
+import type {
+  TransactionPage,
+  TransactionView,
+} from '../../../../../src/modules/transactions/transactions/transactions.types'
 import { useControllerApp } from '../../use-controller-app'
 
 // Shared by the use case specs of `TransactionsController` (one file per endpoint): the controller behind the real
@@ -26,6 +29,9 @@ export const VIEW: TransactionView = {
   transferDirection: null,
 }
 
+/** A page of the list with a next one; the cursor is whatever the service issued, the controller passes it on. */
+export const PAGE: TransactionPage = { items: [VIEW], nextCursor: 'eyJvcmRlciI6ImRlc2MifQ' }
+
 /** A create body that passes validation; specs override one field at a time. */
 export const VALID_BODY = {
   accountId: ACCOUNT_ID,
@@ -45,6 +51,7 @@ export type ErrorBody = { statusCode: number; message: string[] | string }
  */
 export const useTransactionsController = () => {
   const transactions = {
+    list: vi.fn<TransactionsService['list']>(),
     findOne: vi.fn<TransactionsService['findOne']>(),
     create: vi.fn<TransactionsService['create']>(),
     update: vi.fn<TransactionsService['update']>(),
@@ -52,6 +59,7 @@ export const useTransactionsController = () => {
   }
 
   beforeEach(() => {
+    transactions.list.mockReset().mockResolvedValue(PAGE)
     transactions.findOne.mockReset().mockResolvedValue(VIEW)
     transactions.create.mockReset().mockResolvedValue(VIEW)
     transactions.update.mockReset().mockResolvedValue(VIEW)

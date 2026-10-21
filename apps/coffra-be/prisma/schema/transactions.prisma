@@ -95,6 +95,10 @@ model Transaction {
   category Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   @@unique([transferPairId, transferDirection])
-  @@index([accountId])
+  // The sort key of the list `(date, createdAt, id)`, once behind the account and once alone: a page of one account
+  // and a page of all accounts are both read in index order, the cursor included. The first one also serves every
+  // lookup by account (the foreign key, balances). Chosen by measuring the queries of the list.
+  @@index([accountId, date, createdAt, id])
+  @@index([date, createdAt, id])
   @@index([categoryId])
 }

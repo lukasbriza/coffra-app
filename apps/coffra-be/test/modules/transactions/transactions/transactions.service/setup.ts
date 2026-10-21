@@ -19,8 +19,8 @@ import type {
   TransactionView,
 } from '../../../../../src/modules/transactions/transactions/transactions.types'
 
-// Shared by the use case specs of `TransactionsService` (findOne, create, update, remove). The ownership layer is the
-// real one: the specs pin the `where` it produces, not a mock of it.
+// Shared by the use case specs of `TransactionsService` (list, findOne, create, update, remove). The ownership layer
+// is the real one: the specs pin the `where` it produces, not a mock of it.
 
 export { prismaError } from '../../prisma-error'
 
@@ -105,6 +105,7 @@ export const INPUT = {
  * account (CZK) and the category the input points to exist.
  */
 export const useTransactionsService = () => {
+  const findMany = vi.fn<(args: unknown) => Promise<Transaction[]>>()
   const findTransaction = vi.fn<(args: unknown) => Promise<OwnedTransaction | null>>()
   const create = vi.fn<(args: unknown) => Promise<Transaction>>()
   const update = vi.fn<(args: unknown) => Promise<Transaction>>()
@@ -112,13 +113,14 @@ export const useTransactionsService = () => {
   const findAccount = vi.fn<(args: unknown) => Promise<Pick<Account, 'currency'> | null>>()
   const findCategory = vi.fn<(args: unknown) => Promise<Pick<Category, 'id'> | null>>()
   const prisma = {
-    transaction: { findFirst: findTransaction, create, update, delete: remove },
+    transaction: { findMany, findFirst: findTransaction, create, update, delete: remove },
     account: { findFirst: findAccount },
     category: { findFirst: findCategory },
   } as unknown as PrismaService
   const service = new TransactionsService(prisma, new OwnershipService())
 
   beforeEach(() => {
+    findMany.mockReset().mockResolvedValue([])
     findTransaction.mockReset().mockResolvedValue(row())
     create.mockReset().mockResolvedValue(row())
     update.mockReset().mockResolvedValue(row())
@@ -127,5 +129,5 @@ export const useTransactionsService = () => {
     findCategory.mockReset().mockResolvedValue({ id: CATEGORY_ID })
   })
 
-  return { service, findTransaction, create, update, remove, findAccount, findCategory }
+  return { service, findMany, findTransaction, create, update, remove, findAccount, findCategory }
 }

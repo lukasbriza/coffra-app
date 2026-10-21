@@ -2,16 +2,15 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-06
-- **Milestone / task:** M2, #18 (T14); extends [0005](./0005-money-and-currency.md)
 
 ## Context
 
-Accounts exist long before they are entered into the app, so an account balance (T19) needs a starting point. The dashboard (T21) reports the income/expense ratio per category, so whatever carries that starting point must not count as income or expense. ADR [0005](./0005-money-and-currency.md) put the currency on the account and gave a transaction no currency of its own: the amounts of the transactions of an account are in the account currency. 0005 is accepted and is not edited, this record extends it.
+Accounts exist long before they are entered into the app, so an account balance needs a starting point. The dashboard reports the income/expense ratio per category, so whatever carries that starting point must not count as income or expense. ADR [0005](./0005-money-and-currency.md) put the currency on the account and gave a transaction no currency of its own: the amounts of the transactions of an account are in the account currency. 0005 is accepted and is not edited, this record extends it.
 
 ## Decision
 
 - **`Account.openingBalance`**: `Decimal(19,4) NOT NULL DEFAULT 0`, the balance before the first recorded transaction, in the account currency. It may be negative (overdraft, credit card) and may be changed later as a correction (`PATCH`). In the API it is a decimal string like every amount: in as `"-1500.25"` (a JSON number is a `400`), out with exactly four decimal places (`"-1500.2500"`).
-- **Balance** (T19) = `openingBalance` + income + transfer `in` − expense − transfer `out`. The opening balance is not a transaction and never counts as income.
+- **Balance** = `openingBalance` + income + transfer `in` − expense − transfer `out`. The opening balance is not a transaction and never counts as income.
 - **The currency is set when the account is created and never changes.** `PATCH` with a `currency` is a `400` (`currency cannot be changed after the account is created`), even with the same value and even for an account without transactions. Another currency means another account.
 - **Amounts in responses always have four decimal places** (the column scale, `toFixed(4)`): the same amount is always the same string, never in exponent notation. Formatting per currency (two places for CZK, none for JPY) is the client's job.
 

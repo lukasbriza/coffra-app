@@ -16,6 +16,12 @@ export const POSITIVE_DECIMAL_PATTERN = /^(?!0+(\.0+)?$)\d{1,15}(\.\d{1,4})?$/
 /** The shape of a calendar day; whether the day exists is checked by `@IsIsoDate()`. */
 export const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
+/**
+ * The plain spelling of a whole number in a query string: digits only, no sign, no leading zero, no exponent, at most
+ * 15 digits (a safe integer).
+ */
+export const QUERY_INTEGER_PATTERN = /^(0|[1-9]\d{0,14})$/
+
 /** Longest name of an account or a category, after trimming. */
 export const RESOURCE_NAME_MAX_LENGTH = 100
 

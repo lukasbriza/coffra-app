@@ -5,7 +5,7 @@ import { NOTE_MAX_LENGTH } from '../../common/constants'
 import { IsIsoDate } from '../../common/decorators/is-iso-date.decorator'
 import { IsNote } from '../../common/decorators/is-note.decorator'
 import { IsPositiveDecimalAmount } from '../../common/decorators/is-positive-decimal-amount.decorator'
-import { INCOME_EXPENSE_TYPES } from '../transactions.constants'
+import { INCOME_EXPENSE_TYPES } from '../constants'
 import type { CreateTransactionInput, IncomeExpenseType } from '../transactions.types'
 
 export class CreateTransactionDto implements CreateTransactionInput {

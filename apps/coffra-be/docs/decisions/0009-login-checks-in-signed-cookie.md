@@ -2,11 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-03
-- **Milestone / task:** M1, #12 (T9)
 
 ## Context
 
-`AuthProviderInterface` is stateless (T7): `login()` returns the `state`, `nonce` and PKCE `codeVerifier` the callback has to verify, and keeps nothing itself. Between the redirect to the identity provider and the callback somebody has to hold them. ADR [0006](./0006-stateless-jwt-session.md) deliberately has no session table.
+`AuthProviderInterface` is stateless: `login()` returns the `state`, `nonce` and PKCE `codeVerifier` the callback has to verify, and keeps nothing itself. Between the redirect to the identity provider and the callback somebody has to hold them. ADR [0006](./0006-stateless-jwt-session.md) deliberately has no session table.
 
 The holder must also bind the login to the browser that started it. If the callback only needed a value the server remembers by `state`, an attacker could start a login, then trick a victim's browser into opening the callback URL with the attacker's code (login CSRF) and the victim would be signed in as the attacker.
 
@@ -25,7 +24,7 @@ The holder must also bind the login to the browser that started it. If the callb
 - **Server-side map keyed by `state`** (memory) – no secret, but nothing ties it to the browser, so it does not stop login CSRF, and it breaks on restart and with more than one replica.
 - **Session table in Postgres** – binds well only together with a cookie anyway, adds a table and cleanup, and contradicts the stateless direction of 0006.
 - **Reusing `JWT_ACCESS_SECRET` or `JWT_REFRESH_SECRET` with an `aud` claim** – saves one variable, but then one missing `aud` check in the guard turns this cookie into an access token. 0006 separates the secrets to rule out exactly that confusion.
-- **Deriving a key from a JWT secret (HKDF)** – no new variable, but hand-written key handling and a hidden coupling to T10's secrets.
+- **Deriving a key from a JWT secret (HKDF)** – no new variable, but hand-written key handling and a hidden coupling to the secrets of the session tokens.
 - **Encrypted cookie** – hides the verifier from the user's own browser, which gains nothing: the cookie is `HttpOnly` and only ever held by the browser that started the login. Custom crypto is not worth it.
 - **`express-session` / `cookie-session`** – a new library with its own store or secret handling for a value that lives ten minutes.
 

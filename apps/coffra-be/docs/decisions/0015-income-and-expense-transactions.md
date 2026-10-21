@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-19
-- **Milestone / task:** M2, #20 (T16)
 
 ## Context
 
@@ -10,7 +9,7 @@
 
 - **References in the body.** `Transaction` has no `userId` (ADR [0004](./0004-ownership-through-account.md)), so the foreign keys accept an account or a category of another user, and nothing in the database checks that a transaction stays in the currency of its account (ADR [0005](./0005-money-and-currency.md)). ADR [0014](./0014-category-names-and-delete.md) lets the database decide conflicts instead of checking beforehand; here the database cannot decide.
 - **Status codes.** A foreign id in the path is a `404` (ADR [0012](./0012-ownership-layer.md)), but nothing said what a foreign id in the body is, or what a valid request against an incompatible state is.
-- **Transfers.** A transfer is two paired rows (ADR [0003](./0003-transfer-as-paired-rows.md)) with an API of its own (T18). Changing or deleting one side here would break the pair.
+- **Transfers.** A transfer is two paired rows (ADR [0003](./0003-transfer-as-paired-rows.md)) with an API of its own. Changing or deleting one side here would break the pair.
 - **Dates.** `Transaction.date` is a `DATE`, but JavaScript holds it as a `Date` with a time, and the server can run in any time zone. `@prisma/adapter-pg` writes the UTC date part of the parameter and the client reads a `DATE` back as midnight UTC (checked in Prisma 7.8.0), so a day only moves when the application builds or reads the `Date` in local time: `new Date(2026, 9, 19)` on a server at UTC+14 is stored as `2026-10-18`.
 
 ## Decision
@@ -21,7 +20,7 @@
 - **A side of a transfer is read-only here.** `GET :id` returns it with `transferPairId` and `transferDirection`; `PATCH` and `DELETE` answer `409 Transaction is part of a transfer and cannot be changed here`. Creating one is impossible (`type` is `income` or `expense` only, a `400`). Every write also carries `type in (income, expense)` in its `where`, so even a write that skipped the check cannot touch a pair.
 - **Moving to another account** is allowed to an own account of the same currency only; another currency is a `409`. The amount is in the currency of the account and nothing converts it.
 - **Dates are calendar days.** In: `YYYY-MM-DD`, a day that exists, years 0001–9999 (`@IsIsoDate()`, the round trip through `parseIsoDate`/`formatIsoDate` refuses `2026-02-30`; Postgres has no year 0). To Prisma: midnight UTC (`parseIsoDate`). Out: read in UTC (`formatIsoDate`). Never `new Date(year, month, day)`, `Date.UTC` (years 0–99 become 1900–1999) or the local getters.
-- **The view** carries `transferPairId` and `transferDirection` already: the list (T17) and the transfers (T18) share it. A note is trimmed and a blank one is stored as `null`, so "no note" has one form.
+- **The view** carries `transferPairId` and `transferDirection` already: the list and the transfers share it. A note is trimmed and a blank one is stored as `null`, so "no note" has one form.
 
 ## Alternatives considered
 
@@ -32,12 +31,12 @@
 - **A trigger for the currency** – logic outside what the Prisma schema shows.
 - **`404` for a side of a transfer on `PATCH`/`DELETE`** – `GET` returns it, so the API would contradict itself.
 - **No moving between accounts** – a typo in the account would mean delete and create again.
-- **`400` for another currency** (what the T18 notes said first) – the request is well-formed; the conflict is with the stored currency of the target account.
+- **`400` for another currency** (what was first assumed for transfers) – the request is well-formed; the conflict is with the stored currency of the target account.
 - **Dates at local midnight, or as `TEXT`** – the first moves by a day depending on the server, the second loses the type and the ordering in the database.
 
 ## Consequences
 
-- A write costs one or two extra reads (run at once). A forgotten scope in one of them would attach a transaction to another user's account: review checks it, the service specs pin the `where`, T20 tests isolation through the database.
-- Moving a transaction changes the balance of two accounts (T19 computes balances from the database).
-- T18 follows the status rule: the same account on both sides is a `400` (the request alone decides), another currency a `409`. Its writes must not go through these routes.
-- Every date in the API (T17 `from`/`to`, T18, T21) goes through `@IsIsoDate()` and `parseIsoDate`/`formatIsoDate`. An upgrade of Prisma or the driver adapter can change how a `DATE` travels; the unit specs only cover our side (they run in six time zones), the database side was verified against Postgres with the server at UTC+14 and UTC−11 and belongs in the database suite of T20/T24.
+- A write costs one or two extra reads (run at once). A forgotten scope in one of them would attach a transaction to another user's account: review checks it, the service specs pin the `where`, isolation tests go through the database.
+- Moving a transaction changes the balance of two accounts (balances are computed from the database).
+- Transfers follow the status rule: the same account on both sides is a `400` (the request alone decides), another currency a `409`. Its writes must not go through these routes.
+- Every date in the API (the `from`/`to` of the list, transfers, the dashboard) goes through `@IsIsoDate()` and `parseIsoDate`/`formatIsoDate`. An upgrade of Prisma or the driver adapter can change how a `DATE` travels; the unit specs only cover our side (they run in six time zones), the database side was verified against Postgres with the server at UTC+14 and UTC−11 and belongs in a database test suite.

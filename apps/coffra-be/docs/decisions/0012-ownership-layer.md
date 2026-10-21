@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-05
-- **Milestone / task:** M2, #17 (T13)
 
 ## Context
 
@@ -16,7 +15,7 @@ ADR [0004](./0004-ownership-through-account.md) put the ownership check in one p
   - `orNotFound(row, 'Account')` turns the `null` of a scoped read into `404 Account not found`.
 - **Foreign equals missing, `404` not `403`.** A scoped query never finds a row of another owner, so "does not exist" and "is not yours" are indistinguishable to the query and end on the same path with the same body. RFC 9110 15.5.5 allows a `404` for a resource the server will not disclose.
 - **`Owner` is opaque.** Domain services take an `Owner` (from `@CurrentOwner()`), not a `userId`, and never read its fields. Today it is `{ userId }`; with workspaces it becomes `{ userId, workspaceId }` without changing a service signature. `@CurrentUser()` stays for the identity of the caller (`GET /api/users/me`), `@CurrentOwner()` is for data.
-- **One owner per request.** The scope is a single owner, never `tenantId IN (all memberships)`. Checking that an account and a category belong to the same owner (T16) relies on it: both are read through the same scope. A workspace version must keep this invariant.
+- **One owner per request.** The scope is a single owner, never `tenantId IN (all memberships)`. Checking that an account and a category belong to the same owner relies on it: both are read through the same scope. A workspace version must keep this invariant.
 - **A service, not free functions.** It has no dependencies today, but domains inject it (`@Inject(OwnershipService)`), so when it needs the database (memberships, roles) the domain constructors stay the same. `OwnershipModule` is exported from the `core` barrel on its own, so a domain module imports it without booting `AuthModule`.
 - **Nullable `tenantId` on `Account` and `Category`** (UUID, no foreign key, no index, no `Tenant` table). Always `NULL` in the MVP: nothing writes or reads it and no DTO exposes it. `Transaction` does not get one, it inherits the owner from its account.
 
@@ -31,7 +30,7 @@ ADR [0004](./0004-ownership-through-account.md) put the ownership check in one p
 
 ## Consequences
 
-- A forgotten scope is a data leak: the layer does not enforce it. Review checks that every query on `account`, `category` and `transaction` spreads `ownership.scope(owner)`; `findUnique({ where: { id } })` in a domain is a red flag. T20 tests isolation through the real endpoints.
+- A forgotten scope is a data leak: the layer does not enforce it. Review checks that every query on `account`, `category` and `transaction` spreads `ownership.scope(owner)`; `findUnique({ where: { id } })` in a domain is a red flag. Isolation tests go through the real endpoints.
 - The generated Prisma types carry `tenantId: string | null`, so a Prisma row returned straight from a controller would expose it. Responses are mapped explicitly to a view type.
 - A deleted user with a still valid access token (up to `JWT_ACCESS_TTL_SECONDS`) finds nothing (`404`, empty lists); a create fails on the foreign key to `User`, which the domain maps.
 - **Moving to workspaces** touches the layer and migrations only:

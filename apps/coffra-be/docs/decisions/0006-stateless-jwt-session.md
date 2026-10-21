@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-29
-- **Milestone / task:** decided in planning; config in M0 (#3), implementation in M1 (#13)
 
 ## Context
 

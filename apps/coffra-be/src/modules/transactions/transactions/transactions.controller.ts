@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
@@ -27,10 +28,12 @@ import {
 import { CurrentOwner, type Owner } from '../../core'
 
 import { CreateTransactionDto } from './dto/create-transaction.dto'
+import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto'
+import { TransactionPageDto } from './dto/transaction-page.dto'
 import { TransactionDto } from './dto/transaction.dto'
 import { UpdateTransactionDto } from './dto/update-transaction.dto'
 import { TransactionsService } from './transactions.service'
-import type { TransactionView } from './transactions.types'
+import type { TransactionPage, TransactionView } from './transactions.types'
 
 const ID_PARAM = { name: 'id', format: 'uuid', description: 'Transaction id' } as const
 const INVALID_INPUT = { description: 'Invalid input, or an id that is not a UUID' } as const
@@ -54,6 +57,23 @@ export class TransactionsController {
   })
   create(@CurrentOwner() owner: Owner, @Body() dto: CreateTransactionDto): Promise<TransactionView> {
     return this.transactions.create(owner, dto)
+  }
+
+  @Get()
+  // Swagger
+  @ApiOperation({
+    summary: 'Transactions of the signed-in user, filtered, ordered and paged by a cursor; transfer sides included',
+  })
+  @ApiOkResponse({
+    description: 'One page of the matching transactions and the cursor of the next one',
+    type: TransactionPageDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'A malformed id or date, an unknown type or order, `to` before `from`, `limit` out of range, or a cursor that is not a `nextCursor` or was issued for the other order',
+  })
+  list(@CurrentOwner() owner: Owner, @Query() query: ListTransactionsQueryDto): Promise<TransactionPage> {
+    return this.transactions.list(owner, query)
   }
 
   @Get(':id')

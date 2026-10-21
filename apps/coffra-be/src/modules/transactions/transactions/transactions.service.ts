@@ -2,14 +2,20 @@ import { ConflictException, Inject, Injectable } from '@nestjs/common'
 
 import { omitUndefined, parseIsoDate } from '../../../utils'
 import { type Owner, OwnershipService } from '../../core'
-import { type Account, isPrismaError, PrismaErrorCode, PrismaService, TransactionType } from '../../prisma'
+import { type Account, isPrismaError, type Prisma, PrismaErrorCode, PrismaService, TransactionType } from '../../prisma'
 
-import { INCOME_EXPENSE_TYPES } from './transactions.constants'
+import { INCOME_EXPENSE_TYPES } from './constants'
+import { encodeListCursor } from './transactions.cursor'
 import { toTransactionView } from './transactions.mapper'
 import type {
   CreateTransactionInput,
+  DateRange,
   EditableScope,
+  ListCursor,
+  ListOrder,
+  ListTransactionsInput,
   OwnedTransaction,
+  TransactionPage,
   TransactionReferences,
   TransactionView,
   UpdateTransactionInput,
@@ -17,12 +23,50 @@ import type {
 
 const RESOURCE = 'Transaction'
 
+/**
+ * The order of the list. `date` has no time, so many rows tie: `createdAt` orders the rows of one day and `id` makes
+ * the order total. A cursor is a position in exactly this order.
+ */
+const listOrder = (order: ListOrder): Prisma.TransactionOrderByWithRelationInput[] => [
+  { date: order },
+  { createdAt: order },
+  { id: order },
+]
+
 @Injectable()
 export class TransactionsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(OwnershipService) private readonly ownership: OwnershipService,
   ) {}
+
+  /**
+   * One page of the transactions of the owner, both sides of a transfer included. A filter on an account or a category
+   * of another owner is one more condition on rows the scope already limits: it matches nothing, like a missing id.
+   */
+  async list(
+    owner: Owner,
+    { accountId, categoryId, type, from, to, order, limit, cursor }: ListTransactionsInput,
+  ): Promise<TransactionPage> {
+    const rows = await this.prisma.transaction.findMany({
+      where: {
+        account: this.ownership.scope(owner),
+        ...omitUndefined({ accountId, categoryId, type, date: this.dateRange(from, to) }),
+        ...(cursor === undefined ? {} : this.beyond(cursor)),
+      },
+      orderBy: listOrder(order),
+      // One row more than the page: whether it comes says whether there is a next page.
+      take: limit + 1,
+    })
+
+    const page = rows.slice(0, limit)
+    const last = page.at(-1)
+
+    return {
+      items: page.map(toTransactionView),
+      nextCursor: rows.length > limit && last !== undefined ? encodeListCursor(last, order) : null,
+    }
+  }
 
   /** Any transaction of the owner, a side of a transfer included: reading one breaks no pair. */
   async findOne(owner: Owner, id: string): Promise<TransactionView> {
@@ -167,6 +211,47 @@ export class TransactionsService {
   private throwIfGone(error: unknown): void {
     if (isPrismaError(error, PrismaErrorCode.RecordNotFound)) {
       this.ownership.orNotFound(null, RESOURCE)
+    }
+  }
+
+  /**
+   * Both ends inclusive. Only because the column is a `DATE`: it compares with midnight UTC of the day
+   * (`parseIsoDate`), so `lte` keeps the whole day `to`; on a timestamp it would drop all of it but midnight.
+   */
+  private dateRange(from: string | undefined, to: string | undefined): DateRange | undefined {
+    if (from === undefined && to === undefined) {
+      return undefined
+    }
+
+    return omitUndefined({
+      gte: from === undefined ? undefined : parseIsoDate(from),
+      lte: to === undefined ? undefined : parseIsoDate(to),
+    })
+  }
+
+  /**
+   * The rows beyond the cursor in its order: `(date, createdAt, id)` after the one of the cursor, spelled out because
+   * Prisma has no comparison of row values. The bound on `date` alone adds nothing to the result but gives the planner
+   * a range on the date. In `AND`, so it never replaces the `from`/`to` filter, which sits on `date` too.
+   */
+  private beyond({ order, date, createdAt, id }: ListCursor): Prisma.TransactionWhereInput {
+    const day = parseIsoDate(date)
+    const at = new Date(createdAt)
+
+    if (order === 'desc') {
+      return {
+        AND: [
+          { date: { lte: day } },
+          { OR: [{ date: { lt: day } }, { createdAt: { lt: at } }, { createdAt: at, id: { lt: id } }] },
+        ],
+      }
+    }
+
+    return {
+      AND: [
+        { date: { gte: day } },
+        { OR: [{ date: { gt: day } }, { createdAt: { gt: at } }, { createdAt: at, id: { gt: id } }] },
+      ],
     }
   }
 }

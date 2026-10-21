@@ -3,7 +3,8 @@ import { buildMessage, ValidateBy } from 'class-validator'
 import { formatIsoDate, parseIsoDate } from '../../../../utils'
 import { ISO_DATE_PATTERN } from '../constants'
 
-const isIsoDate = (value: unknown): boolean => {
+/** Whether `value` is a calendar day `YYYY-MM-DD` that exists, years 0001–9999: the check of `@IsIsoDate()`. */
+export const isIsoDate = (value: unknown): value is string => {
   // Year 0 does not exist in Postgres; JavaScript would accept it.
   if (typeof value !== 'string' || !ISO_DATE_PATTERN.test(value) || value.startsWith('0000')) {
     return false

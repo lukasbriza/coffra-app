@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-01
-- **Milestone / task:** M0, #8 (T28)
 
 ## Context
 
@@ -23,8 +22,8 @@ One Nest app (`apps/coffra-be`). A domain is a module in `src/modules/<domain>/`
 `index.ts`, importing no domain. Dashboard is cross-domain by nature, so it is its own module that only
 calls public services of other domains.
 
-The boundaries are **not lint-enforced**. A `no-restricted-imports` rule was planned and deliberately
-dropped in T28; they hold by discipline and review.
+The boundaries are **not lint-enforced**. A `no-restricted-imports` rule was considered and deliberately
+dropped; they hold by discipline and review.
 
 Extracting a domain into `packages/<domain>` is deferred until investments start. It should be
 mechanical: move the folder, add a `package.json`, change imports.
