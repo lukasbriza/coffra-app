@@ -34,7 +34,7 @@ export class TransactionDto implements TransactionView {
     type: String,
     format: 'uuid',
     nullable: true,
-    description: 'Shared by both sides of a transfer, null otherwise',
+    description: 'Shared by both sides of a transfer, null otherwise; the `pairId` of the transfer in `/api/transfers`',
   })
   transferPairId!: string | null
 

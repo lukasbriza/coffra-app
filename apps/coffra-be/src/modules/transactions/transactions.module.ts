@@ -3,9 +3,10 @@ import { Module } from '@nestjs/common'
 import { AccountsModule } from './accounts/accounts.module'
 import { CategoriesModule } from './categories/categories.module'
 import { TransactionsFeatureModule } from './transactions/transactions.module'
+import { TransfersModule } from './transfers/transfers.module'
 
-// Each feature of the domain is its own module, wired in here. Transfers and balances land here (T18, T19).
+// Each feature of the domain is its own module, wired in here.
 @Module({
-  imports: [AccountsModule, CategoriesModule, TransactionsFeatureModule],
+  imports: [AccountsModule, CategoriesModule, TransactionsFeatureModule, TransfersModule],
 })
 export class TransactionsModule {}

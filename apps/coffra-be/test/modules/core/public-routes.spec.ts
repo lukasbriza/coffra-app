@@ -117,6 +117,17 @@ describe('the public routes of the API', () => {
 
       expect(response.headers['www-authenticate']).toBe('Bearer')
     })
+
+    // Routes with no `GET`: a `GET` there would answer 404 before the guard runs, so the method matters.
+    it.each([
+      ['post', '/api/transfers'],
+      ['patch', '/api/transfers/1f2e3d4c-5b6a-4987-8a6b-5c4d3e2f1a0b'],
+      ['delete', '/api/transfers/1f2e3d4c-5b6a-4987-8a6b-5c4d3e2f1a0b'],
+    ] as const)('turns %s %s away without a token', async (method, path) => {
+      const response = await request(server())[method](path).expect(401)
+
+      expect(response.headers['www-authenticate']).toBe('Bearer')
+    })
   })
 
   describe('are reachable without a token', () => {

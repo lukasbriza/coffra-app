@@ -38,7 +38,8 @@ import type { TransactionPage, TransactionView } from './transactions.types'
 const ID_PARAM = { name: 'id', format: 'uuid', description: 'Transaction id' } as const
 const INVALID_INPUT = { description: 'Invalid input, or an id that is not a UUID' } as const
 const NOT_FOUND = { description: 'No transaction with this id among the transactions of the signed-in user' } as const
-const TRANSFER_SIDE = 'The transaction is one side of a transfer: change or delete the transfer instead'
+const TRANSFER_SIDE =
+  'The transaction is one side of a transfer: change or delete the transfer instead (`/api/transfers/{transferPairId}`)'
 
 @Controller('transactions')
 // Swagger
