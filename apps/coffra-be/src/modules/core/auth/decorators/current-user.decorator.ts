@@ -2,7 +2,15 @@ import { createParamDecorator, type ExecutionContext } from '@nestjs/common'
 
 import type { AuthenticatedRequest } from '../types'
 
-/** The id of the user the access token was issued to (`User.id`). Only for routes that are not `@Public()`. */
+/**
+ * Injects the id of the user the access token was issued to (`User.id`).
+ *
+ * Only for routes that are not `@Public()`. It identifies the caller; for the data of a request use
+ * `@CurrentOwner()` instead.
+ *
+ * @throws Error on a `@Public()` route or when the guard is not registered: a programming error, so it fails loudly
+ * instead of handing out `undefined`
+ */
 export const CurrentUser = createParamDecorator((_data: unknown, context: ExecutionContext): string => {
   const { auth } = context.switchToHttp().getRequest<AuthenticatedRequest>()
 

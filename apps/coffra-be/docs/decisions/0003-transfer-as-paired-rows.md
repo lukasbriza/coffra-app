@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-01
-- **Milestone / task:** M0, #1 (T1), #2 (T2); service logic in T18
 
 ## Context
 
@@ -31,7 +30,7 @@ The CHECK constraints are added by hand in the init migration because Prisma can
 
 ## Alternatives considered
 
-- **One row with a `targetAccountId`** – simpler to enter, but outside the original plan and it would need a migration once bank sync delivers two separate records.
+- **One row with a `targetAccountId`** – simpler to enter, but it would need a migration once bank sync delivers two separate records.
 
 ## Consequences
 

@@ -3,6 +3,7 @@ import { type HealthIndicatorResult, HealthIndicatorService } from '@nestjs/term
 
 import { PrismaService } from '../prisma'
 
+/** Health check of the database: it is up when `SELECT 1` succeeds. */
 @Injectable()
 export class PrismaHealthIndicator {
   private readonly logger = new Logger(PrismaHealthIndicator.name)
@@ -12,7 +13,15 @@ export class PrismaHealthIndicator {
     @Inject(PrismaService) private readonly prisma: PrismaService,
   ) {}
 
-  /** Reports only up/down. The error goes to the log, never into the response (may contain DB host/user). */
+  /**
+   * Checks whether the database answers.
+   *
+   * Reports only up or down. The error goes to the log, never into the response, because it may contain the database
+   * host or user.
+   *
+   * @param key - name of the check in the result
+   * @returns `up` when the query succeeded, `down` otherwise
+   */
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
     const indicator = this.healthIndicatorService.check(key)
 

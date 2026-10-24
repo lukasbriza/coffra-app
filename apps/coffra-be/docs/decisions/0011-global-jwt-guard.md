@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-04
-- **Milestone / task:** M1, #14 (T11)
 
 ## Context
 
@@ -32,9 +31,9 @@ ADR [0006](./0006-stateless-jwt-session.md) and [0010](./0010-token-delivery-and
 
 - **The guard exists only where it is switched on.** An app booted without the `useGlobalGuards` line, e.g. a test module that calls only `configureApp` or a future e2e suite, has no authentication. Nothing tests `main.ts` itself: keep the line next to `configureApp`, and make every e2e bootstrap repeat it and assert a `401` on a protected route.
 - A new public route has to be marked on purpose. `test/modules/core/public-routes.spec.ts` pins the exact list of public routes, so an accidental one fails the build.
-- The access token of a deleted user stays valid for up to `JWT_ACCESS_TTL_SECONDS` (15 minutes). Routes that read or write data catch it through the ownership layer (T13); `/me` and the refresh already do.
+- The access token of a deleted user stays valid for up to `JWT_ACCESS_TTL_SECONDS` (15 minutes). Routes that read or write data catch it through the ownership layer; `/me` and the refresh already do.
 - Infrastructure now imports a domain once: `health` imports `Public` from the `core` barrel. It is the one exception to "infrastructure imports no domain", documented in `CLAUDE.md`.
 - Guard rejections log one `warn` line each (from `AuthTokensService`), so unauthenticated traffic shows up in the log. There is no rate limit; that waits until the API is exposed beyond the home network.
-- The generated OpenAPI document (T26) carries the global `security`, so a client generated from it sends the bearer token on every operation except the public ones.
+- The generated OpenAPI document carries the global `security`, so a client generated from it sends the bearer token on every operation except the public ones.
 - Swagger UI and `swagger-json` are served outside the Nest pipeline and stay open. The spec is not a secret.
 - Unknown paths still answer `404`: the guard only runs on routes that exist.

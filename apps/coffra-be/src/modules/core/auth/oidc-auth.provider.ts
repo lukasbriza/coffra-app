@@ -8,7 +8,13 @@ import { type Env, NodeEnv } from '../../config'
 import { OIDC_SCOPE } from './constants'
 import type { AuthChecks, AuthProviderInterface, AuthSession, AuthUserInfo, LoginRequest, LogoutRequest } from './types'
 
-/** Generic OIDC client (any compliant IdP, not only Keycloak). See ADR 0008 for the library choice. */
+/**
+ * Generic OpenID Connect client: authorization code flow with PKCE against any compliant identity provider, not only
+ * Keycloak.
+ *
+ * Stateless: the values to verify in the callback are handed back to the caller, which decides where to keep them. The
+ * provider is discovered lazily on first use and a failed discovery is not cached.
+ */
 @Injectable()
 export class OidcAuthProvider implements AuthProviderInterface {
   private readonly logger = new Logger(OidcAuthProvider.name)
@@ -30,6 +36,12 @@ export class OidcAuthProvider implements AuthProviderInterface {
       this.issuerUrl.protocol === 'http:' && config.get('NODE_ENV', { infer: true }) !== NodeEnv.Production
   }
 
+  /**
+   * Starts a login: builds the authorization URL with a PKCE challenge, `state` and `nonce`.
+   *
+   * @returns the URL to send the browser to and the values to verify in the callback
+   * @throws ServiceUnavailableException when the identity provider is unavailable
+   */
   async login(): Promise<LoginRequest> {
     const configuration = await this.getConfiguration()
 
@@ -49,6 +61,18 @@ export class OidcAuthProvider implements AuthProviderInterface {
     return { authorizationUrl: url.href, checks: { state, nonce, codeVerifier } }
   }
 
+  /**
+   * Handles the callback of the identity provider: exchanges the code and validates the ID token.
+   *
+   * The `redirect_uri` comes from the configuration, not from the request: behind a reverse proxy the protocol and host
+   * of the request differ from what is registered at the identity provider.
+   *
+   * @param callbackParams - the query parameters of the callback, as sent
+   * @param checks - the values saved at the login: `state`, `nonce` and the PKCE verifier
+   * @returns who logged in, with the access token for a later call to `getUserInfo`
+   * @throws UnauthorizedException when the response is not valid; the reason is only logged
+   * @throws ServiceUnavailableException when the identity provider is unavailable
+   */
   async validateSession(callbackParams: URLSearchParams, checks: AuthChecks): Promise<AuthSession> {
     const configuration = await this.getConfiguration()
 
@@ -76,6 +100,16 @@ export class OidcAuthProvider implements AuthProviderInterface {
     }
   }
 
+  /**
+   * Fetches the profile of the user from the userinfo endpoint.
+   *
+   * The `sub` of the response must equal the one from the ID token.
+   *
+   * @param session - the session returned by `validateSession`
+   * @returns the profile; the email falls back to the one from the ID token
+   * @throws UnauthorizedException when the request is rejected or the provider returns no email
+   * @throws ServiceUnavailableException when the identity provider is unavailable
+   */
   async getUserInfo(session: AuthSession): Promise<AuthUserInfo> {
     const configuration = await this.getConfiguration()
 
@@ -100,6 +134,15 @@ export class OidcAuthProvider implements AuthProviderInterface {
     }
   }
 
+  /**
+   * Builds the URL that ends the session at the identity provider.
+   *
+   * It carries only the `client_id`: there is no `id_token_hint` (the ID token is not kept), so the provider asks the
+   * user to confirm, and no `post_logout_redirect_uri` (there is no frontend to return to yet).
+   *
+   * @returns the URL, or `null` when the provider has no end-session endpoint (it is optional in discovery)
+   * @throws ServiceUnavailableException when the identity provider is unavailable
+   */
   async logout(): Promise<LogoutRequest> {
     const configuration = await this.getConfiguration()
 
@@ -108,16 +151,28 @@ export class OidcAuthProvider implements AuthProviderInterface {
       return { endSessionUrl: null }
     }
 
-    // Only `client_id`, which the library adds. No `id_token_hint`: the ID token is not kept (ADR 0006), so the
-    // IdP asks the user to confirm. No `post_logout_redirect_uri`: there is no frontend to return to yet.
     return { endSessionUrl: client.buildEndSessionUrl(configuration).href }
   }
 
+  /**
+   * Returns the discovered configuration of the provider, discovering it on the first call.
+   *
+   * @returns the configuration, cached after a successful discovery
+   * @throws ServiceUnavailableException when the discovery fails
+   */
   private getConfiguration(): Promise<client.Configuration> {
     this.configuration ??= this.discover()
     return this.configuration
   }
 
+  /**
+   * Runs the discovery of the identity provider.
+   *
+   * A failed discovery is not cached, or one blip would block logins until restart.
+   *
+   * @returns the configuration of the provider
+   * @throws ServiceUnavailableException when the provider cannot be reached or answers badly
+   */
   private async discover(): Promise<client.Configuration> {
     try {
       return await client.discovery(
@@ -136,7 +191,15 @@ export class OidcAuthProvider implements AuthProviderInterface {
     }
   }
 
-  /** Logs the reason server-side and returns a generic 401 so nothing from the library or the IdP leaks. */
+  /**
+   * Builds the answer to a rejected response.
+   *
+   * Logs the reason server-side and returns a generic 401, so nothing from the library or the identity provider leaks.
+   *
+   * @param reason - why the response was rejected, for the log
+   * @param error - the underlying error, if there was one
+   * @returns the exception to throw
+   */
   private reject(reason: string, error?: unknown): UnauthorizedException {
     this.logger.warn(error === undefined ? reason : `${reason} (${describeError(error)})`)
     return new UnauthorizedException('Authentication failed')

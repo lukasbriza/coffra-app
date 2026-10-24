@@ -25,6 +25,8 @@
     "start": "NODE_ENV=production node build/main",
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
+    "test:e2e": "vitest run --project e2e",
+    "test:unit": "vitest run --project unit",
     "test:watch": "vitest",
     "ts": "tsc --build tsconfig.json"
   },

@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 
-import { Body, Controller, type INestApplication, Post } from '@nestjs/common'
+import { Body, Controller, type INestApplication, Logger, Post } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import { Type } from 'class-transformer'
 import { IsInt, IsString } from 'class-validator'
@@ -60,6 +60,7 @@ describe('app setup', () => {
 
   afterEach(async () => {
     await app.close()
+    vi.restoreAllMocks()
   })
 
   describe('ValidationPipe', () => {
@@ -86,7 +87,10 @@ describe('app setup', () => {
       expect(body.info?.database.status).toBe('up')
     })
 
-    it('returns 503 when the database is down', async () => {
+    it('returns 503 when the database is down, with the reason in the log only', async () => {
+      const error = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {
+        // the failure is expected here: the spec checks the log instead of printing it as an ERROR
+      })
       queryRaw.mockRejectedValue(new Error('connection refused'))
 
       const response = await request(server()).get('/api/health').expect(503)
@@ -95,6 +99,7 @@ describe('app setup', () => {
       expect(body.status).toBe('error')
       expect(body.error?.database.status).toBe('down')
       expect(JSON.stringify(body)).not.toContain('connection refused')
+      expect(error).toHaveBeenCalledWith('Database check failed: connection refused')
     })
 
     it('is not served without the api prefix', async () => {

@@ -8,11 +8,13 @@ import type { Env } from '../../config'
 import { AUTH_CHECKS_TTL_SECONDS } from './constants'
 import type { AuthChecks } from './types'
 
+/** The only signing algorithm accepted for the login checks token. */
 const ALGORITHM = 'HS256'
 
 /**
- * Seals the login checks into a short-lived signed token for the cookie (ADR 0009). Signed with its own secret,
- * so it can never be taken for an access or a refresh token.
+ * Seals the login checks into a short-lived signed token for the cookie.
+ *
+ * Signed with its own secret, so it can never be taken for an access or a refresh token.
  */
 @Injectable()
 export class AuthChecksService {
@@ -26,6 +28,12 @@ export class AuthChecksService {
     this.secret = config.get('AUTH_CHECKS_SECRET', { infer: true })
   }
 
+  /**
+   * Signs the login checks into a token that lives for `AUTH_CHECKS_TTL_SECONDS`.
+   *
+   * @param checks - the values the callback has to verify
+   * @returns the signed token to put into the cookie
+   */
   sign({ state, nonce, codeVerifier }: AuthChecks): Promise<string> {
     return this.jwt.signAsync(
       { state, nonce, codeVerifier },
@@ -33,7 +41,13 @@ export class AuthChecksService {
     )
   }
 
-  /** Throws `UnauthorizedException` when the token is missing, forged, expired or has an unexpected shape. */
+  /**
+   * Verifies the token from the cookie and returns the checks inside.
+   *
+   * @param token - the value of the login checks cookie, `undefined` when the cookie is absent
+   * @returns the login checks
+   * @throws UnauthorizedException when the token is missing, forged, expired or has an unexpected shape
+   */
   async verify(token: string | undefined): Promise<AuthChecks> {
     if (!token) {
       throw this.reject('Login checks cookie is missing')
@@ -54,7 +68,14 @@ export class AuthChecksService {
     return { state, nonce, codeVerifier }
   }
 
-  /** Logs the reason server-side, never the token. The response only says to start the login again. */
+  /**
+   * Builds the answer to a rejected cookie.
+   *
+   * Logs the reason server-side, never the token. The response only says to start the login again.
+   *
+   * @param reason - why the cookie was rejected, for the log
+   * @returns the exception to throw
+   */
   private reject(reason: string): UnauthorizedException {
     this.logger.warn(reason)
     return new UnauthorizedException('Login session missing or expired')

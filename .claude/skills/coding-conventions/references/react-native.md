@@ -16,6 +16,19 @@ Read with `coding-conventions` (base) and `react.md`. Applies to `apps/*` Expo a
 {items.length && <List />}          // ❌ renders `0` → crash
 ```
 
+## JSDoc
+
+The base skill's Comments rules and `react.md` → JSDoc (props on the props `type`, `@property name - …`), with
+what is specific to a device.
+
+| Declaration | The block says |
+|---|---|
+| Screen (route file, default export) | the route it is (`/settings`) and what the user does there |
+| Component / hook | as in `react.md`; add what only a device shows: platform (`iOS only`), gesture, safe-area, keyboard |
+| Wrapper of a native module | what it hides, which permission or setting it needs, what it does on a platform that lacks it |
+| Reanimated / gesture worklet | that it runs on the UI thread, so it may not call JS-thread code |
+| Platform file (`*.ios.tsx`, `*.android.tsx`) | what differs from the shared one and why |
+
 ## Interaction & layout
 
 - **`Pressable`**, not `TouchableOpacity`/`TouchableHighlight` (deprecated ergonomics).
@@ -68,3 +81,5 @@ Read with `coding-conventions` (base) and `react.md`. Applies to `apps/*` Expo a
 | RN `Image` for remote/large images | `expo-image` |
 | `StyleSheet.create` / inline styles | `@emotion/native` `styled` + tokens |
 | Native dep in a shared package | keep it in the app |
+| Platform-only behaviour with no note | say which platform in the block |
+| A worklet with no mention of the UI thread | note that it runs there and what it may touch |

@@ -9,9 +9,11 @@ import { IS_PUBLIC_KEY } from './constants'
 import type { AuthenticatedRequest } from './types'
 
 /**
- * Made global in `main.ts` (`app.useGlobalGuards(new JwtAuthGuard(...))`): every route needs a valid access
- * token unless it is `@Public()`. Stateless on purpose (ADR 0006, 0010): the token is checked, the database is
- * not, so a deleted user's access token lives until it expires. Only ever verifies access tokens, never refresh tokens.
+ * Guard that lets a request through only with a valid access token, unless the route is `@Public()`.
+ *
+ * Made global in `main.ts` (`app.useGlobalGuards(new JwtAuthGuard(...))`), so every route is protected by default.
+ * Stateless on purpose: the token is checked, the database is not, so the access token of a deleted user lives until
+ * it expires. Only ever verifies access tokens, never refresh tokens.
  *
  * Built by hand, not by Nest, so it is no provider and has no `@Injectable()` / `@Inject()`.
  */
@@ -21,6 +23,17 @@ export class JwtAuthGuard implements CanActivate {
     private readonly tokens: AuthTokensService,
   ) {}
 
+  /**
+   * Decides whether a request may reach its route.
+   *
+   * A valid token sets `request.auth` with the id of the user. A public route is let through without reading the
+   * header at all, so refresh and logout work for a client whose access token has expired.
+   *
+   * @param context - the request being guarded
+   * @returns `true` when the route is public or the access token is valid
+   * @throws UnauthorizedException when the token is missing, forged, expired or not an access token; the response then
+   * carries `WWW-Authenticate: Bearer`
+   */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC_KEY, [
       context.getHandler(),
