@@ -23,12 +23,16 @@ import type {
   UpdateTransferInput,
 } from './transfers.types'
 
+/** Name of the resource in the `404 Transfer not found` answer. */
 const RESOURCE = 'Transfer'
 
 /**
+ * The transfers between accounts of one owner.
+ *
  * A transfer is two transactions, `out` on the source account and `in` on the target, sharing a `transferPairId`.
  * Every write touches both at once, in one statement or one database transaction, so no side is ever left alone. A
- * transfer never has a category.
+ * transfer never has a category. Every query carries the owner scope through the account, so a transfer of somebody
+ * else is never found and ends the same way as a missing one.
  */
 @Injectable()
 export class TransfersService {
@@ -37,6 +41,18 @@ export class TransfersService {
     @Inject(OwnershipService) private readonly ownership: OwnershipService,
   ) {}
 
+  /**
+   * Moves money between two accounts of the owner in the same currency.
+   *
+   * Both sides are written in one `INSERT`, so when one fails neither is written. Both accounts are read through the
+   * owner scope before the write.
+   *
+   * @param owner - whose accounts they have to be
+   * @param input - source account, target account, amount, date, and optionally a note
+   * @returns the new transfer
+   * @throws NotFoundException when an account is not among those of the owner
+   * @throws ConflictException when the two accounts have different currencies
+   */
   async create(owner: Owner, input: CreateTransferInput): Promise<TransferView> {
     const { fromAccountId, toAccountId, amount, date, note } = input
 
@@ -96,6 +112,21 @@ export class TransfersService {
     }
   }
 
+  /**
+   * Changes a transfer of the owner: amount, date, note and the accounts of its sides.
+   *
+   * Amount, date and note always change on both sides. `fromAccountId` moves the `out` side and `toAccountId` the `in`
+   * side; giving both swapped reverses the transfer. Both sides are updated in one database transaction, always `out`
+   * first.
+   *
+   * @param owner - whose transfer and accounts they have to be
+   * @param pairId - id of the transfer (the `transferPairId` of its sides)
+   * @param input - the fields to change; a field left out stays as it is
+   * @returns the changed transfer
+   * @throws NotFoundException when the transfer, or a new account, is not among those of the owner
+   * @throws ConflictException when a new account has another currency than the transfer, or the same account would be
+   * on both sides once the input meets the side that stays
+   */
   async update(owner: Owner, pairId: string, input: UpdateTransferInput): Promise<TransferView> {
     const { fromAccountId, toAccountId, amount, date, note } = input
 
@@ -195,9 +226,17 @@ export class TransfersService {
     }
   }
 
-  /** No read before: there is nothing to decide but whether the transfer exists, and the count tells that. */
+  /**
+   * Deletes a transfer of the owner, both of its sides at once.
+   *
+   * There is no read before: nothing is left to decide but whether the transfer exists, and the count of deleted rows
+   * tells that. One `DELETE` is atomic, so no side is ever left alone.
+   *
+   * @param owner - whose transfer it has to be
+   * @param pairId - id of the transfer (the `transferPairId` of its sides)
+   * @throws NotFoundException when the id is not a transfer of the owner
+   */
   async remove(owner: Owner, pairId: string): Promise<void> {
-    // One DELETE of both sides: atomic, so no side is ever left alone.
     const { count } = await this.prisma.transaction.deleteMany({
       where: { transferPairId: pairId, account: this.ownership.scope(owner) },
     })
@@ -208,9 +247,16 @@ export class TransfersService {
   }
 
   /**
-   * Both sides of the transfer, with the currency of their accounts. A transaction has no owner columns of its own, so
-   * it is scoped through its account. Only a transfer has a `transferPairId` (CHECK `transfer_shape`), so the `type`
-   * needs no condition.
+   * Reads both sides of a transfer, with the currency of their accounts.
+   *
+   * A transaction has no owner columns of its own, so it is scoped through its account. Only a transfer has a
+   * `transferPairId` (CHECK `transfer_shape`), so the `type` needs no condition.
+   *
+   * @param owner - whose transfer it has to be
+   * @param pairId - id of the transfer
+   * @returns the `out` and the `in` side
+   * @throws NotFoundException when the id is not a transfer of the owner
+   * @throws Error when the rows are not exactly one `out` and one `in` of the same pair
    */
   private async findPair(owner: Owner, pairId: string): Promise<TransferPair<OwnedTransaction>> {
     const rows = await this.prisma.transaction.findMany({
@@ -225,7 +271,15 @@ export class TransfersService {
     return toTransferPair(rows)
   }
 
-  /** One side by the unique `(transferPairId, transferDirection)`, scoped through its account. */
+  /**
+   * Builds the `where` of one side of a transfer: the unique `(transferPairId, transferDirection)`, scoped through its
+   * account.
+   *
+   * @param owner - whose transfer it has to be
+   * @param pairId - id of the transfer
+   * @param transferDirection - which side
+   * @returns the `where` of an `update` of that side
+   */
   private sideWhere(
     owner: Owner,
     pairId: string,
@@ -238,8 +292,14 @@ export class TransfersService {
   }
 
   /**
-   * An account of the owner, with its currency. The read is scoped to the owner, so a foreign account is not found
-   * and gives the same 404 as a missing one.
+   * Reads an account of the owner, with its currency.
+   *
+   * The read is scoped to the owner, so a foreign account is not found and gives the same 404 as a missing one.
+   *
+   * @param owner - whose account it has to be
+   * @param accountId - id of the account
+   * @returns the currency of the account
+   * @throws NotFoundException when the id is not an account of the owner
    */
   private async findAccount(owner: Owner, accountId: string): Promise<Pick<Account, 'currency'>> {
     const account = await this.prisma.account.findFirst({
@@ -250,7 +310,11 @@ export class TransfersService {
     return this.ownership.orNotFound(account, 'Account')
   }
 
-  /** The 404 of a transfer the owner does not have: a missing transfer and a foreign one look the same. */
+  /**
+   * Throws the 404 of a transfer the owner does not have: a missing transfer and a foreign one look the same.
+   *
+   * @throws NotFoundException always
+   */
   private throwTransferNotFound(): never {
     return this.ownership.orNotFound<never>(null, RESOURCE)
   }

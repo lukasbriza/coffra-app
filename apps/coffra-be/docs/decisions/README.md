@@ -53,3 +53,4 @@ and mark the old one `Superseded by NNNN`.
 | [0015](./0015-income-and-expense-transactions.md)    | Transactions: scoped reference reads, read-only transfer sides    | Accepted |
 | [0016](./0016-transactions-list.md)                  | Transactions list: keyset cursor, filters as predicates, indexes  | Accepted |
 | [0017](./0017-transfers.md)                          | Transfers: one resource over the pair, atomic writes, no category | Accepted |
+| [0018](./0018-account-balances.md)                   | Account balance computed on read, counted up to a day             | Accepted |

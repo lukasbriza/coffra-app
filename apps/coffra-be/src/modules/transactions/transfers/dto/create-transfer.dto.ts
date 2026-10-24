@@ -9,6 +9,7 @@ import { IsAccountId } from '../decorators/is-account-id.decorator'
 import { IsDifferentFrom } from '../decorators/is-different-from.decorator'
 import type { CreateTransferInput } from '../transfers.types'
 
+/** Body of `POST /api/transfers`. */
 export class CreateTransferDto implements CreateTransferInput {
   @ApiProperty({ format: 'uuid', description: 'The account the money leaves: an account of the signed-in user' })
   @IsAccountId()
@@ -43,8 +44,12 @@ export class CreateTransferDto implements CreateTransferInput {
   @IsNote()
   note?: string | null
 
-  // A transfer never has a category. Declared only to be refused, any value and `null` alike: the global `whitelist`
-  // would otherwise drop it silently and the client would believe the transfer has one.
+  /**
+   * The category, declared only to be refused.
+   *
+   * A transfer never has a category. Any value and `null` alike is a 400: the global `whitelist` would otherwise drop
+   * it silently and the client would believe the transfer has one.
+   */
   @ApiHideProperty()
   @Equals(undefined, { message: 'a transfer has no category' })
   categoryId?: never

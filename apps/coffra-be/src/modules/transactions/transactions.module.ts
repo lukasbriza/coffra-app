@@ -5,7 +5,11 @@ import { CategoriesModule } from './categories/categories.module'
 import { TransactionsFeatureModule } from './transactions/transactions.module'
 import { TransfersModule } from './transfers/transfers.module'
 
-// Each feature of the domain is its own module, wired in here.
+/**
+ * The domain of the money: accounts, categories, transactions and transfers.
+ *
+ * Each feature of the domain is its own module, wired in here.
+ */
 @Module({
   imports: [AccountsModule, CategoriesModule, TransactionsFeatureModule, TransfersModule],
 })

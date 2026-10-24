@@ -19,6 +19,7 @@ export const VIEW: AccountView = {
   type: AccountType.bank,
   currency: 'CZK',
   openingBalance: '1250.5000',
+  balance: '4500.5500',
 }
 
 /** A create body that passes validation; specs override one field at a time. */

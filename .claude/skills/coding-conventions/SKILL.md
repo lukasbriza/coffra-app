@@ -1,6 +1,6 @@
 ---
 name: coding-conventions
-description: Use when writing, editing, or reviewing any code in this monorepo — TypeScript, React/MUI, Next.js, React Native (Expo), or NestJS: components, hooks, routes, modules, types, state, or naming. Covers conventions on top of @lukasbriza/eslint-config; read references/<framework>.md for framework specifics.
+description: Use when writing, editing, or reviewing any code in this monorepo — TypeScript, React/MUI, Next.js, React Native (Expo), or NestJS: components, hooks, routes, modules, types, state, naming, or doc comments (JSDoc). Covers conventions on top of @lukasbriza/eslint-config; read references/<framework>.md for framework specifics.
 ---
 
 ## Overview
@@ -77,9 +77,38 @@ Handler naming:
 
 ## Comments
 
-- One short line, plain English a junior reads at a glance. No multi-line prose, no insider jargon.
-- Comment only non-obvious logic, workarounds, guards. Default to no comment.
-- Never restate well-named code. If a "why" doesn't fit one line, rename the symbol instead.
+Two kinds, two rules. Plain English a junior reads at a glance, no insider jargon, in both.
+
+**Declarations → JSDoc.** A `/** … */` block directly above the declaration, above its decorators too.
+Every exported type, class, function, method, hook and component has one; so does a private helper
+that isn't trivial. Not `//` above a declaration.
+
+| Part | Write |
+|---|---|
+| Summary | first sentence, starts with a verb ("Lists …", "Validates …"), says what it means, not what the signature already shows |
+| Rules | a short paragraph with what matters: invariants, side effects, the reason behind a choice |
+| `@param name - …` | each parameter that isn't self-explanatory; a hyphen after the name; a destructured one under the name of its object |
+| `@returns …` | what comes back when the type doesn't say it |
+| `@throws ErrorType when …` | each error a caller has to handle (for HTTP: the exception and the status) |
+| `@property name - …` | **on a `type`/props type, not a comment per field**: the type is described in its own block, its fields under `@property` |
+| Field block | only for a field that carries a rule (a validation choice, a field declared just to be refused) |
+
+- No ADR numbers or task ids in a comment: the reason for a decision lives in the decision record.
+- Don't restate the name or the types ("`@param id - the id`").
+
+```ts
+/**
+ * Reads one account of the owner with its balance.
+ *
+ * @param owner - whose account it has to be
+ * @param id - id of the account
+ * @returns the account with its balance
+ * @throws NotFoundException when the id is not an account of the owner
+ */
+```
+
+**Inside a body → `//`.** One short line, only for non-obvious logic, a workaround or a guard. Default to
+no comment. Never restate well-named code; if a "why" doesn't fit one line, rename the symbol instead.
 
 ## Boundaries
 
@@ -101,3 +130,7 @@ Handler naming:
 | Deep import `@lukasbriza/theme/src/...` | import from `@lukasbriza/theme` |
 | `React.ReactNode` | `import type { ReactNode } from 'react'` |
 | Restating code in a comment | delete it or rename the symbol |
+| `//` above a class, function or type | a `/** … */` block |
+| A comment on every field of a `type` | one block on the type, `@property name - …` |
+| `@param id the id` (no hyphen, restates the name) | `@param id - id of the account` or leave it out |
+| Exported declaration with no JSDoc | summary, rules, `@param` / `@returns` / `@throws` as needed |

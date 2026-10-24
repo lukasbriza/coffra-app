@@ -5,8 +5,13 @@ import { OwnershipModule } from '../../core'
 import { TransactionsController } from './transactions.controller'
 import { TransactionsService } from './transactions.service'
 
-// Not `TransactionsModule`: that name is the module of the whole domain (`../transactions.module.ts`).
-// `OwnershipModule`, not `CoreModule`: the domain needs the ownership layer only, not auth. `PrismaModule` is global.
+/**
+ * Income and expense: `/api/transactions`, including the list with filters and a cursor.
+ *
+ * Named `TransactionsFeatureModule` because `TransactionsModule` is the module of the whole domain
+ * (`../transactions.module.ts`). Imports `OwnershipModule` and not `CoreModule`: the domain needs the ownership layer
+ * only, not auth. `PrismaModule` is global.
+ */
 @Module({
   imports: [OwnershipModule],
   controllers: [TransactionsController],

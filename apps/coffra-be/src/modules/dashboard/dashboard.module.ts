@@ -1,5 +1,10 @@
 import { Module } from '@nestjs/common'
 
-// Reads data only through the public services of `transactions` (T21).
+/**
+ * The dashboard: figures derived from the transactions.
+ *
+ * Reads data only through the public services of `transactions`, never from its tables. Empty until the first figure
+ * is built.
+ */
 @Module({})
 export class DashboardModule {}

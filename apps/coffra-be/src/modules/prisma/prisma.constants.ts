@@ -11,4 +11,5 @@ export const PrismaErrorCode = {
   RecordNotFound: 'P2025',
 } as const
 
+/** One of the codes in `PrismaErrorCode`. */
 export type PrismaErrorCode = (typeof PrismaErrorCode)[keyof typeof PrismaErrorCode]

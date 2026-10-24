@@ -3,7 +3,12 @@ import { buildMessage, ValidateBy } from 'class-validator'
 import { formatIsoDate, parseIsoDate } from '../../../../utils'
 import { ISO_DATE_PATTERN } from '../constants'
 
-/** Whether `value` is a calendar day `YYYY-MM-DD` that exists, years 0001–9999: the check of `@IsIsoDate()`. */
+/**
+ * Tells whether a value is a calendar day `YYYY-MM-DD` that exists, years 0001–9999: the check of `@IsIsoDate()`.
+ *
+ * @param value - anything; only a string of the right shape can pass
+ * @returns `true` for an existing day, which narrows `value` to `string`
+ */
 export const isIsoDate = (value: unknown): value is string => {
   // Year 0 does not exist in Postgres; JavaScript would accept it.
   if (typeof value !== 'string' || !ISO_DATE_PATTERN.test(value) || value.startsWith('0000')) {
@@ -17,7 +22,11 @@ export const isIsoDate = (value: unknown): value is string => {
 }
 
 /**
- * A calendar day `YYYY-MM-DD` that exists, years 0001–9999. No time and no time zone: the column is a `DATE`.
+ * Validates a calendar day `YYYY-MM-DD` that exists, years 0001–9999.
+ *
+ * No time and no time zone: the column is a `DATE`.
+ *
+ * @returns the property decorator
  */
 export const IsIsoDate = (): PropertyDecorator =>
   ValidateBy({

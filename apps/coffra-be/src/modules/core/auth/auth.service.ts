@@ -8,8 +8,10 @@ import { AUTH_PROVIDER } from './constants'
 import type { AuthProviderInterface, AuthSession, LogoutRequest, StartedLogin, TokenPair } from './types'
 
 /**
- * Ties the login flow together: the provider talks to the IdP, the users service resolves who logged in,
- * the tokens service issues the app's own session.
+ * Ties the login flow together.
+ *
+ * The provider talks to the identity provider, the users service resolves who logged in, the tokens service issues the
+ * app's own session.
  */
 @Injectable()
 export class AuthService {
@@ -20,6 +22,12 @@ export class AuthService {
     @Inject(UsersService) private readonly users: UsersService,
   ) {}
 
+  /**
+   * Starts a login.
+   *
+   * @returns where to send the browser and the signed token with the login checks for the cookie
+   * @throws ServiceUnavailableException when the identity provider is unavailable
+   */
   async startLogin(): Promise<StartedLogin> {
     const { authorizationUrl, checks } = await this.provider.login()
 
@@ -27,9 +35,16 @@ export class AuthService {
   }
 
   /**
-   * Finishes a login from the IdP's callback and issues the session. The user is touched last, so a rejected
-   * callback (bad cookie, wrong `state`, failed code exchange, no email) never creates or changes one,
-   * and never yields a token.
+   * Finishes a login from the callback of the identity provider and issues the session.
+   *
+   * The user is touched last, so a rejected callback (bad cookie, wrong `state`, failed code exchange, no email) never
+   * creates or changes one, and never yields a token.
+   *
+   * @param callbackParams - the query parameters of the callback, as sent
+   * @param checksToken - the value of the login checks cookie, `undefined` when the cookie is absent
+   * @returns the access and refresh token of the user who logged in
+   * @throws UnauthorizedException when the cookie or the provider response is invalid
+   * @throws ServiceUnavailableException when the identity provider is unavailable
    */
   async completeLogin(callbackParams: URLSearchParams, checksToken?: string): Promise<TokenPair> {
     const checks = await this.checks.verify(checksToken)
@@ -43,8 +58,14 @@ export class AuthService {
   }
 
   /**
-   * Swaps a refresh token for a new pair. The new refresh token ends when the old one would have, and the user
-   * must still exist: deleting the `User` is the only way to end a session early (the tokens are stateless).
+   * Swaps a refresh token for a new pair.
+   *
+   * The new refresh token ends when the old one would have, and the user must still exist: deleting the `User` is the
+   * only way to end a session early, because the tokens are stateless.
+   *
+   * @param refreshToken - the refresh token sent by the client
+   * @returns a new access and refresh token
+   * @throws UnauthorizedException when the token is invalid or its user no longer exists
    */
   async refresh(refreshToken?: string): Promise<TokenPair> {
     const { userId, expiresAt } = await this.tokens.verifyRefresh(refreshToken)
@@ -57,11 +78,25 @@ export class AuthService {
     return this.tokens.issue(user.id, expiresAt)
   }
 
-  /** Nothing to end on our side (stateless tokens): hands back where the browser must go to end the IdP session. */
+  /**
+   * Hands back where the browser must go to end the session at the identity provider.
+   *
+   * There is nothing to end on our side, because the tokens are stateless.
+   *
+   * @returns the end-session URL, `null` when the provider has none
+   * @throws ServiceUnavailableException when the identity provider is unavailable
+   */
   logout(): Promise<LogoutRequest> {
     return this.provider.logout()
   }
 
+  /**
+   * Fetches the email of the user from the identity provider.
+   *
+   * @param session - the session whose access token is used for the call
+   * @returns the email
+   * @throws UnauthorizedException when the provider returns none
+   */
   private async userInfoEmail(session: AuthSession): Promise<string> {
     const { email } = await this.provider.getUserInfo(session)
 

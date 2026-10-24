@@ -9,7 +9,11 @@ import { DEFAULT_LIST_LIMIT, LIST_ORDERS, MAX_LIST_LIMIT } from '../constants'
 import { IsListCursor } from '../decorators/is-list-cursor.decorator'
 import type { ListCursor, ListOrder, ListTransactionsInput } from '../transactions.types'
 
-// `@IsOptional()` is enough in a query, unlike in a body: a query string has no `null`, every value is a string.
+/**
+ * Query of `GET /api/transactions`: the filters, the order and the position of the page.
+ *
+ * `@IsOptional()` is enough in a query, unlike in a body: a query string has no `null`, every value is a string.
+ */
 export class ListTransactionsQueryDto implements ListTransactionsInput {
   @ApiPropertyOptional({ format: 'uuid', description: 'Only the transactions of this account' })
   @IsOptional()
@@ -21,8 +25,12 @@ export class ListTransactionsQueryDto implements ListTransactionsInput {
   @IsUUID()
   categoryId?: string
 
+  /**
+   * Only the transactions of this type.
+   *
+   * All three types, unlike a create: the list shows both sides of a transfer.
+   */
   @ApiPropertyOptional({ enum: TransactionType, enumName: 'TransactionType' })
-  // All three types, unlike a create: the list shows both sides of a transfer.
   @IsOptional()
   @IsEnum(TransactionType)
   type?: TransactionType

@@ -47,6 +47,48 @@ export class UsersController {
 - Enable a global `ValidationPipe` (`whitelist: true`, `transform: true`).
 - Annotate DTOs/endpoints with `@nestjs/swagger` decorators — Swagger is served at `api/swagger`.
 
+## JSDoc
+
+The base skill's Comments rules, applied to what a Nest app is made of. The `// Swagger` separator stays a plain
+`//`; the JSDoc goes above everything, decorators included.
+
+| Declaration | The block says |
+|---|---|
+| `@Module` class | what the module offers; why it imports what it imports (`OwnershipModule`, not `CoreModule`) |
+| Controller class | the HTTP layer of `/api/<path>`: takes the owner and the validated input, delegates to the service, no logic |
+| Controller method | first line the route (`` `GET /api/accounts/:id`: reads one account … ``); `@param` for owner / id / dto / query; `@returns`; `@throws` per HTTP error the service raises |
+| Service class | what it owns and the invariant every method keeps (e.g. every query carries the owner scope) |
+| Service method | summary and the rule it enforces; `@param`; `@returns`; `@throws ConflictException when …` per exception |
+| Private helper | same, short; say which error it turns into which status |
+| DTO class | the route it is the body or query of; a field gets a block **only** for a rule (a validation choice, a field declared just to be refused), the rest is `@ApiProperty` |
+| Mapper | the only way a row leaves the service; `@param row`, `@returns` |
+| Validator decorator | what it validates; `@returns the property decorator`; the helper `(value, args)` says when it passes on purpose |
+| `*.types.ts` | one block per type, fields under `@property name - …` |
+| `constants.ts` | one line per constant: what it is for |
+
+```ts
+/**
+ * `GET /api/accounts/:id`: reads one account of the signed-in user.
+ *
+ * @param owner - whose account it has to be, from the access token
+ * @param id - id of the account; a value that is not a UUID is a `400`
+ * @returns the account with its balance
+ * @throws NotFoundException when the id is not an account of the owner
+ */
+@Get(':id')
+// Swagger
+@ApiOperation({ summary: 'One account' })
+findOne(@CurrentOwner() owner: Owner, @Param('id', ParseUUIDPipe) id: string): Promise<AccountView> {}
+
+/**
+ * What the API returns for an account.
+ *
+ * @property id - id of the account (UUID)
+ * @property balance - opening balance plus every transaction up to the day asked for
+ */
+export type AccountView = { id: string; balance: string }
+```
+
 ## Config
 
 - Read env via `@nestjs/config` (`ConfigModule`/`ConfigService`), not raw `process.env`.
@@ -73,5 +115,7 @@ export class UsersController {
 | `new PrismaClient()` in a module | inject `PrismaService` |
 | Raw `process.env` | `ConfigService` |
 | Untyped/unvalidated body | DTO class + `class-validator` |
+| Controller or service method with no `@throws` for its HTTP errors | one `@throws ExceptionType when …` per error |
+| `//` above a class or a DTO field | JSDoc block (DTO field: only when it carries a rule) |
 | `url` in `schema.prisma` (v7) | `prisma.config.ts` + adapter |
 | Editing prisma `generated/` | `pnpm prisma:generate` |

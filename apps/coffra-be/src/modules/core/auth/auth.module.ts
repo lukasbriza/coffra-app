@@ -10,6 +10,11 @@ import { AuthService } from './auth.service'
 import { AUTH_PROVIDER } from './constants'
 import { OidcAuthProvider } from './oidc-auth.provider'
 
+/**
+ * Authentication: the login through an OpenID Connect provider and the app's own session tokens.
+ *
+ * Exports only the token of the active provider (`AUTH_PROVIDER`); the services stay internal.
+ */
 @Module({
   imports: [UsersModule, JwtModule.register({})],
   controllers: [AuthController],

@@ -8,17 +8,23 @@ import { IsPositiveDecimalAmount } from '../../common/decorators/is-positive-dec
 import { INCOME_EXPENSE_TYPES } from '../constants'
 import type { CreateTransactionInput, IncomeExpenseType } from '../transactions.types'
 
+/** Body of `POST /api/transactions`: an income or an expense. */
 export class CreateTransactionDto implements CreateTransactionInput {
   @ApiProperty({ format: 'uuid', description: 'An account of the signed-in user; the amount is in its currency' })
   @IsUUID()
   accountId!: string
 
+  /**
+   * Income or expense.
+   *
+   * Validated with `IsIn` and not `IsEnum(TransactionType)`: the latter would let a transfer in, which this API would
+   * store as half a pair.
+   */
   @ApiProperty({
     enum: [...INCOME_EXPENSE_TYPES],
     enumName: 'IncomeExpenseType',
     description: 'A transfer between own accounts has an API of its own',
   })
-  // Not `@IsEnum(TransactionType)`: that would let a transfer in, which this API would store as half a pair.
   @IsIn(INCOME_EXPENSE_TYPES, { message: 'type must be income or expense (a transfer has an API of its own)' })
   type!: IncomeExpenseType
 
@@ -33,13 +39,17 @@ export class CreateTransactionDto implements CreateTransactionInput {
   @IsIsoDate()
   date!: string
 
+  /**
+   * A category of the signed-in user.
+   *
+   * `null` is a value here: the column is nullable and it means no category.
+   */
   @ApiPropertyOptional({
     type: String,
     format: 'uuid',
     nullable: true,
     description: 'A category of the signed-in user; null or left out for none',
   })
-  // `null` is a value here: the column is nullable and it means no category.
   @ValidateIf((_dto: unknown, value: unknown) => value !== undefined && value !== null)
   @IsUUID()
   categoryId?: string | null

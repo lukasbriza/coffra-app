@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest'
 
 import { AccountType, Prisma } from '../../../../../src/modules/prisma'
 
-import { ACCOUNT_ID, OWNED, OWNER, prismaError, row, useAccountsService } from './setup'
+import { ACCOUNT_ID, expense, income, OWNED, OWNER, prismaError, row, totalsQuery, useAccountsService } from './setup'
 
 describe('AccountsService.update', () => {
-  const { service, findFirst, update } = useAccountsService()
+  const { service, findFirst, update, groupBy } = useAccountsService()
 
   it('finds the account within the rows of the owner first, then writes with the same scope', async () => {
     update.mockResolvedValue(row({ name: 'Savings' }))
@@ -46,6 +46,49 @@ describe('AccountsService.update', () => {
       type: 'bank',
       currency: 'CZK',
       openingBalance: '-20.0000',
+      balance: '-20.0000',
+    })
+  })
+
+  describe('the balance in the answer', () => {
+    it('is counted from the opening balance just written, over the transactions up to the end of today (UTC)', async () => {
+      update.mockResolvedValue(row({ openingBalance: new Prisma.Decimal('100') }))
+      groupBy.mockResolvedValue([income('50'), expense('20.5')])
+
+      const view = await service.update(OWNER, ACCOUNT_ID, { openingBalance: '100' })
+
+      expect(groupBy).toHaveBeenCalledExactlyOnceWith(totalsQuery([ACCOUNT_ID]))
+      expect(view.balance).toBe('129.5000')
+    })
+
+    it('is read after the write, so a changed opening balance is already in it', async () => {
+      update.mockResolvedValue(row())
+
+      await service.update(OWNER, ACCOUNT_ID, { name: 'Savings' })
+
+      expect(update.mock.invocationCallOrder[0]).toBeLessThan(groupBy.mock.invocationCallOrder[0] ?? 0)
+    })
+
+    it('is not read when the account is missing or foreign, or was deleted before the write', async () => {
+      findFirst.mockResolvedValueOnce(null)
+      await service.update(OWNER, ACCOUNT_ID, { name: 'Savings' }).catch(() => {
+        // the 404 is asserted below
+      })
+
+      update.mockRejectedValue(prismaError('P2025'))
+      await service.update(OWNER, ACCOUNT_ID, { name: 'Savings' }).catch(() => {
+        // the 404 is asserted below
+      })
+
+      expect(groupBy).not.toHaveBeenCalled()
+    })
+
+    it('passes a failure of the aggregation on unchanged', async () => {
+      const failure = new Error('connection lost')
+      update.mockResolvedValue(row())
+      groupBy.mockRejectedValue(failure)
+
+      await expect(service.update(OWNER, ACCOUNT_ID, { name: 'Savings' })).rejects.toBe(failure)
     })
   })
 

@@ -31,15 +31,27 @@ import { UpdateTransferDto } from './dto/update-transfer.dto'
 import { TransfersService } from './transfers.service'
 import type { TransferView } from './transfers.types'
 
-// `:pairId`, not `:id`: the id of a transfer is the `transferPairId` of its two transactions, never the id of one.
+/**
+ * Swagger description of the `:pairId` path parameter.
+ *
+ * `:pairId`, not `:id`: the id of a transfer is the `transferPairId` of its two transactions, never the id of one.
+ */
 const PAIR_ID_PARAM = {
   name: 'pairId',
   format: 'uuid',
   description: 'Id of the transfer: the `transferPairId` of both of its transactions',
 } as const
+
+/** Swagger description of a `404`: a missing and a foreign transfer answer alike. */
 const NOT_FOUND = { description: 'No transfer with this pairId among the transactions of the signed-in user' } as const
 
-// No read: both transactions of a transfer, with their `transferPairId`, come from `GET /api/transactions`.
+/**
+ * HTTP layer of the transfers under `/api/transfers`: create, change and delete.
+ *
+ * There is no read: both transactions of a transfer, with their `transferPairId`, come from `GET /api/transactions`.
+ * Takes the owner from the access token and the validated input from the request, hands both to
+ * {@link TransfersService} and returns its answer. It has no logic of its own.
+ */
 @Controller('transfers')
 // Swagger
 @ApiTags('transfers')
@@ -47,6 +59,15 @@ const NOT_FOUND = { description: 'No transfer with this pairId among the transac
 export class TransfersController {
   constructor(@Inject(TransfersService) private readonly transfers: TransfersService) {}
 
+  /**
+   * `POST /api/transfers`: moves money between two accounts of the signed-in user in the same currency.
+   *
+   * @param owner - whose accounts they have to be, from the access token
+   * @param dto - source account, target account, amount, date, and optionally a note
+   * @returns the new transfer
+   * @throws NotFoundException when an account of the body is not among those of the owner
+   * @throws ConflictException when the two accounts have different currencies
+   */
   @Post()
   // Swagger
   @ApiOperation({ summary: 'Move money between two own accounts in the same currency' })
@@ -60,6 +81,17 @@ export class TransfersController {
     return this.transfers.create(owner, dto)
   }
 
+  /**
+   * `PATCH /api/transfers/:pairId`: changes a transfer, both of its transactions at once.
+   *
+   * @param owner - whose transfer and accounts they have to be, from the access token
+   * @param pairId - id of the transfer; a value that is not a UUID is a `400`
+   * @param dto - the fields to change
+   * @returns the whole changed transfer
+   * @throws NotFoundException when the transfer, or a new account, is not among those of the owner
+   * @throws ConflictException when a new account has another currency than the transfer, or the same account would be
+   * on both sides
+   */
   @Patch(':pairId')
   // Swagger
   @ApiOperation({
@@ -86,6 +118,13 @@ export class TransfersController {
     return this.transfers.update(owner, pairId, dto)
   }
 
+  /**
+   * `DELETE /api/transfers/:pairId`: deletes a transfer, both of its transactions at once.
+   *
+   * @param owner - whose transfer it has to be, from the access token
+   * @param pairId - id of the transfer; a value that is not a UUID is a `400`
+   * @throws NotFoundException when the pairId is not a transfer of the owner
+   */
   @Delete(':pairId')
   @HttpCode(HttpStatus.NO_CONTENT)
   // Swagger

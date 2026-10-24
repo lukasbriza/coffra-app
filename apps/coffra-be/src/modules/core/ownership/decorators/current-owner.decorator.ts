@@ -4,8 +4,13 @@ import type { AuthenticatedRequest } from '../../auth/types'
 import type { Owner } from '../ownership.types'
 
 /**
- * Whose data the request works with, for every route that reads or writes domain data. Only for routes
- * that are not `@Public()`. `@CurrentUser()` stays for the identity of the caller (`GET /api/users/me`).
+ * Injects whose data the request works with, for every route that reads or writes domain data.
+ *
+ * Only for routes that are not `@Public()`. `@CurrentUser()` stays for the identity of the caller
+ * (`GET /api/users/me`).
+ *
+ * @throws Error on a `@Public()` route or when the guard is not registered: a programming error, so it fails loudly
+ * instead of handing out an owner without a user
  */
 export const CurrentOwner = createParamDecorator((_data: unknown, context: ExecutionContext): Owner => {
   const { auth } = context.switchToHttp().getRequest<AuthenticatedRequest>()

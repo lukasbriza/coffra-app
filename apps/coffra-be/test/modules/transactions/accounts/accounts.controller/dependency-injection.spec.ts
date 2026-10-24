@@ -15,6 +15,6 @@ describe('AccountsController dependency injection', () => {
       providers: [{ provide: AccountsService, useValue: { list } }],
     }).compile()
 
-    await expect(moduleRef.get(AccountsController).list({ userId: 'user-1' })).resolves.toEqual([])
+    await expect(moduleRef.get(AccountsController).list({ userId: 'user-1' }, {})).resolves.toEqual([])
   })
 })

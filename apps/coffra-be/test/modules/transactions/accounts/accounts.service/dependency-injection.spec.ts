@@ -19,6 +19,6 @@ describe('AccountsService dependency injection', () => {
     const service = moduleRef.get(AccountsService)
 
     // Both dependencies are in place: the query runs and the scope comes from the ownership layer.
-    await expect(service.list({ userId: '0b0f7f3e-3c55-4a43-9d33-6a0c1f7f4a11' })).resolves.toEqual([])
+    await expect(service.list({ userId: '0b0f7f3e-3c55-4a43-9d33-6a0c1f7f4a11' }, {})).resolves.toEqual([])
   })
 })

@@ -3,14 +3,34 @@ import 'reflect-metadata'
 import { plainToInstance, Type } from 'class-transformer'
 import { IsEnum, IsInt, IsNotEmpty, IsString, IsUrl, Matches, Max, Min, MinLength, validateSync } from 'class-validator'
 
+/** The environment the application runs in. */
 export enum NodeEnv {
   Development = 'development',
   Production = 'production',
   Test = 'test',
 }
 
+/** What counts as a URL in the environment: a host without a top-level domain (`localhost`) is fine, `http` or `https`. */
 const URL_OPTIONS = { require_tld: false, protocols: ['http', 'https'], require_protocol: true }
 
+/**
+ * The environment variables of the application, validated at startup by `validateEnv`.
+ *
+ * @property NODE_ENV - the environment the application runs in; `development` when left out
+ * @property PORT - port the HTTP server listens on, 1 to 65535; `3000` when left out
+ * @property DATABASE_URL - Postgres connection string (`postgres://` or `postgresql://`)
+ * @property OIDC_ISSUER_URL - issuer of the identity provider; must be `https` in production
+ * @property OIDC_CLIENT_ID - id of the client registered at the identity provider
+ * @property OIDC_CLIENT_SECRET - secret of that client
+ * @property OIDC_REDIRECT_URI - callback the identity provider sends the browser back to; must be `https` in production
+ * @property JWT_ACCESS_SECRET - signs access tokens; at least 32 characters, different from the other secrets
+ * @property JWT_REFRESH_SECRET - signs refresh tokens; at least 32 characters, different from the other secrets
+ * @property AUTH_CHECKS_SECRET - signs the short-lived cookie that carries the OIDC login checks between `login` and
+ * the callback; at least 32 characters, different from the JWT secrets
+ * @property JWT_ACCESS_TTL_SECONDS - lifetime of an access token in seconds; `900` when left out
+ * @property JWT_REFRESH_TTL_SECONDS - lifetime of a session from the login in seconds; `2592000` (30 days) when left
+ * out
+ */
 export class Env {
   @IsEnum(NodeEnv)
   NODE_ENV: NodeEnv = NodeEnv.Development
@@ -48,7 +68,6 @@ export class Env {
   @MinLength(32)
   JWT_REFRESH_SECRET!: string
 
-  /** Signs the short-lived cookie that carries the OIDC login checks between `login` and the callback (ADR 0009). */
   @IsString()
   @MinLength(32)
   AUTH_CHECKS_SECRET!: string
@@ -65,8 +84,15 @@ export class Env {
 }
 
 /**
- * Validates raw env at startup. Throws listing `VARIABLE: reason` per line.
- * Never includes values, so secrets cannot leak into logs.
+ * Validates the raw environment at startup.
+ *
+ * Besides the rules on each variable it checks that the three secrets differ, so one kind of signed value is never
+ * accepted as another, and that production uses `https` for the issuer and the redirect URI. The message never
+ * includes values, so secrets cannot leak into logs.
+ *
+ * @param config - the raw environment, variable name to value
+ * @returns the validated variables with their defaults filled in
+ * @throws Error listing one `VARIABLE: reason` per line when anything is invalid
  */
 export function validateEnv(config: Record<string, unknown>): Env {
   const env = plainToInstance(Env, config)
@@ -96,7 +122,7 @@ export function validateEnv(config: Record<string, unknown>): Env {
     }
   }
 
-  // Plain http is tolerated for the dev Keycloak only (ADR 0008): production must fail to start instead.
+  // Plain http is tolerated for the dev Keycloak only: production must fail to start instead.
   // The Secure login cookie would silently not work on an http redirect URI either.
   if (env.NODE_ENV === NodeEnv.Production) {
     for (const property of ['OIDC_ISSUER_URL', 'OIDC_REDIRECT_URI'] as const) {
