@@ -23,6 +23,32 @@ export const Badge = ({ count, className }: BadgeProps) => (
 )
 ```
 
+## JSDoc
+
+The base skill's Comments rules, applied to React. Props are described on the **props type**, not in the
+component block, and not per prop.
+
+| Declaration | The block says |
+|---|---|
+| Props `type` | `Props of {@link Badge}.` and every prop under `@property name - …` (what it does, the default when it has one) |
+| Component | what it renders and when to use it; behaviour a caller can't see (controlled or not, side effects). No `@param` / `@returns`: the props type has them |
+| Hook | what it gives and when it re-renders; `@param`; `@returns` (what the object or tuple holds); `@throws` (e.g. outside its provider) |
+| Context provider / `useXxx` | what the context holds; the `useXxx` hook documents its `@throws` |
+| Helper / util | summary, `@param`, `@returns` |
+
+```tsx
+/**
+ * Props of {@link Badge}.
+ *
+ * @property count - number shown in the badge
+ * @property className - extra class, merged after the base one
+ */
+type BadgeProps = { count: number; className?: string }
+
+/** Small pill with a count, e.g. unread messages. */
+export const Badge = ({ count, className }: BadgeProps) => <span className={clsx('badge', className)}>{count}</span>
+```
+
 ## Body order (pages / complex components)
 
 `state → hooks → handlers → effects → render`, effects grouped just above `return`.
@@ -90,3 +116,5 @@ const HomePage = async () => {
 | Raw `@mui/system` `styled` | `styled` from `@lukasbriza/styles` |
 | Hard-coded colour/size | theme token |
 | `useContext(Ctx)` in a component | the `useXxx` hook |
+| A comment on each prop of a props type | one block on the type, `@property name - …` |
+| Hook with no `@returns` / `@throws` | say what it returns and when it throws |

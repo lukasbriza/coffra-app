@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-01
-- **Milestone / task:** M0, #1 (T1), #2 (T2)
 
 ## Context
 

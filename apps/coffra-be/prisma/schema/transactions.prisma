@@ -22,13 +22,20 @@ enum TransferDirection {
 /// Place where money is held (bank account, cash). Owned by one user, has a single currency.
 /// Deleting an account that still has transactions is forbidden.
 model Account {
-  id        String      @id @default(uuid()) @db.Uuid
-  userId    String      @db.Uuid
-  name      String
-  type      AccountType
-  currency  String      @db.Char(3)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id             String      @id @default(uuid()) @db.Uuid
+  userId         String      @db.Uuid
+  /// Future workspace of the row (multitenancy). Always NULL in the MVP: nothing writes or reads it,
+  /// ownership goes through `userId`. No foreign key until the `Workspace` table exists.
+  tenantId       String?     @db.Uuid
+  name           String
+  type           AccountType
+  /// Set when the account is created and never changed: the amounts of its transactions are in it.
+  currency       String      @db.Char(3)
+  /// Balance before the first recorded transaction, in the account currency. May be negative (overdraft,
+  /// credit card) and may be corrected later. Not a transaction: it never counts as income.
+  openingBalance Decimal     @default(0) @db.Decimal(19, 4)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   // Foreign key side: `userId` is the real column, `user` is only a virtual field for queries.
   // Cascade: deleting the user deletes their accounts.
@@ -40,10 +47,12 @@ model Account {
 }
 
 /// User-defined category for income/expense transactions. A transaction has at most one category.
-/// Deleting a category keeps its transactions and sets their `categoryId` to null.
+/// A category that still has transactions cannot be deleted.
 model Category {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @db.Uuid
+  /// Future workspace of the row, always NULL in the MVP (see `Account.tenantId`).
+  tenantId  String?  @db.Uuid
   /// Unique per user.
   name      String
   createdAt DateTime @default(now())
@@ -81,11 +90,15 @@ model Transaction {
   // these two models, so no relation name is needed.
   // Restrict: an account that still has transactions cannot be deleted.
   account  Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  // Optional (`?`) because SetNull needs a nullable FK: deleting the category keeps the
-  // transaction and nulls `categoryId`.
-  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  // Optional (`?`): a transaction may have no category, a transfer never has one.
+  // Restrict: a category that still has transactions cannot be deleted.
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   @@unique([transferPairId, transferDirection])
-  @@index([accountId])
+  // The sort key of the list `(date, createdAt, id)`, once behind the account and once alone: a page of one account
+  // and a page of all accounts are both read in index order, the cursor included. The first one also serves every
+  // lookup by account (the foreign key, balances). Chosen by measuring the queries of the list.
+  @@index([accountId, date, createdAt, id])
+  @@index([date, createdAt, id])
   @@index([categoryId])
 }

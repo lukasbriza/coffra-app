@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-03
-- **Milestone / task:** M1, #9 (T6); implemented in #10 (T7)
 
 ## Context
 
@@ -20,8 +19,8 @@ A spike against the dev Keycloak (Node 22.22, `openid-client` 6.8.8, TypeScript 
 
 Use **`openid-client` 6.x**, pinned to an exact version (no `^`, like the other dependencies).
 
-- The app's `tsconfig.json` sets `"module": "node20"` so a static import compiles to `require()`. This is part of T7.
-- Node >= 22.12 is required (already the root `engines`). The Docker base image in T22 must satisfy it.
+- The app's `tsconfig.json` sets `"module": "node20"` so a static import compiles to `require()`.
+- Node >= 22.12 is required (already the root `engines`). The Docker base image must satisfy it.
 - `allowInsecureRequests` is used only when the issuer URL is `http:` **and** `NODE_ENV` is not `production`. A production start with an `http:` issuer must fail instead of silently allowing it. The lint suppression carries a comment pointing to this record.
 - Client authentication is `client_secret_post` (the default for a string secret), no realm change needed.
 
@@ -33,7 +32,7 @@ Use **`openid-client` 6.x**, pinned to an exact version (no `^`, like the other 
 
 ## Consequences
 
-- `module: node20` lives in the app's tsconfig only. The same change belongs in the shared `@lukasbriza/ts-config/nestjs` and `templates/app-nest` so that scaffolded apps inherit it. That is a separate decision outside T6.
+- `module: node20` lives in the app's tsconfig only. The same change belongs in the shared `@lukasbriza/ts-config/nestjs` and `templates/app-nest` so that scaffolded apps inherit it. That is a separate decision.
 - A new ESM-only dependency now compiles without special handling, but the Node >= 22.12 floor becomes load-bearing: running on an older Node breaks at start, not at build.
 - `OAUTH_INVALID_RESPONSE` is what a `state` mismatch looks like. Callback errors must be mapped to 401/400, not leaked from the library.
-- An authorization code is single-use, so e2e tests with a mocked IdP (T12) cannot replay a recorded callback.
+- An authorization code is single-use, so e2e tests with a mocked IdP cannot replay a recorded callback.

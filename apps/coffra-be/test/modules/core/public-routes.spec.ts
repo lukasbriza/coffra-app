@@ -14,8 +14,9 @@ import { IS_PUBLIC_KEY } from '../../../src/modules/core/auth/constants'
 import { UsersService } from '../../../src/modules/core/users/users.service'
 import { HealthModule } from '../../../src/modules/health'
 import { PrismaService } from '../../../src/modules/prisma'
+import { TransactionsModule } from '../../../src/modules/transactions'
 
-// The real `CoreModule` and `HealthModule`, wired as in the app: this is where the global guard and the list of
+// The real `CoreModule`, `HealthModule` and `TransactionsModule`, wired as in the app: this is where the global guard and the list of
 // public routes are proven. Only the outside world is stubbed (config, database, identity provider).
 
 const config: Record<string, unknown> = {
@@ -83,7 +84,7 @@ describe('the public routes of the API', () => {
     provider.logout.mockReset().mockResolvedValue({ endSessionUrl: null })
 
     const moduleRef = await Test.createTestingModule({
-      imports: [ConfigStubModule, PrismaStubModule, CoreModule, HealthModule, DiscoveryModule],
+      imports: [ConfigStubModule, PrismaStubModule, CoreModule, HealthModule, TransactionsModule, DiscoveryModule],
       controllers: [ProbeController],
     })
       .overrideProvider(AUTH_PROVIDER)
@@ -104,8 +105,26 @@ describe('the public routes of the API', () => {
   })
 
   describe('the global guard', () => {
-    it.each(['/api/probe', '/api/users/me'])('turns %s away without a token', async (path) => {
+    it.each([
+      '/api/probe',
+      '/api/users/me',
+      '/api/accounts',
+      '/api/categories',
+      '/api/transactions',
+      '/api/transactions/9a8b7c6d-5e4f-4a3b-9c2d-1e0f2a3b4c5d',
+    ])('turns %s away without a token', async (path) => {
       const response = await request(server()).get(path).expect(401)
+
+      expect(response.headers['www-authenticate']).toBe('Bearer')
+    })
+
+    // Routes with no `GET`: a `GET` there would answer 404 before the guard runs, so the method matters.
+    it.each([
+      ['post', '/api/transfers'],
+      ['patch', '/api/transfers/1f2e3d4c-5b6a-4987-8a6b-5c4d3e2f1a0b'],
+      ['delete', '/api/transfers/1f2e3d4c-5b6a-4987-8a6b-5c4d3e2f1a0b'],
+    ] as const)('turns %s %s away without a token', async (method, path) => {
+      const response = await request(server())[method](path).expect(401)
 
       expect(response.headers['www-authenticate']).toBe('Bearer')
     })

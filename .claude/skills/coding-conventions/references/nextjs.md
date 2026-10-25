@@ -41,6 +41,20 @@ export const HomePage: WebPage = async () => {
 }
 ```
 
+## JSDoc
+
+The base skill's Comments rules (and `react.md` → JSDoc for components and props), applied to the App Router.
+
+| Declaration | The block says |
+|---|---|
+| `src/app/**` route file | none: it only re-exports, the block lives on the real implementation |
+| Page / layout | the route it renders (`/[locale]/settings`) and what is on it; data it fetches on the server. Props come from the shared types, so no `@property` |
+| `generateMetadata` / `generateStaticParams` | what it derives from the route; `@param props - …`; `@returns` |
+| Route handler (`GET`, `POST`) | first line the route and method; `@param request - …`; `@returns` the response and its status; `@throws` |
+| Server action | what it changes; `@param formData - …`; `@returns` the state the form reads; `@throws` |
+| Client component | say why it is `'use client'` (state, event, browser API) |
+| Store factory / provider (Zustand) | what slice of state it holds; that the provider creates one store per request |
+
 ## Metadata & caching
 
 - Metadata via the Metadata API — `export const metadata` or `async generateMetadata()`. Never
@@ -73,6 +87,8 @@ export const HomePage: WebPage = async () => {
 | `process.env` in a client component | `env()` from `next-runtime-env` |
 | Editing the API schema by hand | regenerate in `@lukasbriza/api` |
 | Computed `middleware` matcher | plain string literal |
+| `'use client'` file with no hint why | one line in the block: what needs the client |
+| Route handler or server action with no `@returns` / `@throws` | document the response and the failures |
 
 ## State & data — pick the right tool
 

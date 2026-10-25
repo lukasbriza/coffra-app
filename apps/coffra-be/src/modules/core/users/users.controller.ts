@@ -7,12 +7,23 @@ import { UserDto } from './dto/user.dto'
 import { UsersService } from './users.service'
 import type { UserProfile } from './users.types'
 
-@ApiTags('users')
+/** HTTP layer of the users under `/api/users`: the profile of the signed-in user. */
 @Controller('users')
+// Swagger
+@ApiTags('users')
 export class UsersController {
   constructor(@Inject(UsersService) private readonly users: UsersService) {}
 
+  /**
+   * `GET /api/users/me`: the user the access token was issued to.
+   *
+   * @param userId - the user from the access token
+   * @returns the id and the email of the user
+   * @throws UnauthorizedException when the user was deleted while the access token was still valid (the same answer as
+   * a refresh gives)
+   */
   @Get('me')
+  // Swagger
   @ApiOperation({ summary: 'The user the access token was issued to' })
   @ApiOkResponse({ description: 'The signed-in user', type: UserDto })
   @ApiUnauthorizedResponse({
