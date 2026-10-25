@@ -26,6 +26,8 @@
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
     "test:e2e": "vitest run --project e2e",
+    "pretest:integration": "node test/integration/require-postgres.mjs",
+    "test:integration": "vitest run --config test/integration/vitest.config.mjs",
     "test:unit": "vitest run --project unit",
     "test:watch": "vitest",
     "ts": "tsc --build tsconfig.json"
