@@ -11,6 +11,8 @@ import { AccountsController } from '../../../src/modules/transactions/accounts/a
 import { AccountsService } from '../../../src/modules/transactions/accounts/accounts.service'
 import { CategoriesController } from '../../../src/modules/transactions/categories/categories.controller'
 import { CategoriesService } from '../../../src/modules/transactions/categories/categories.service'
+import { DashboardController } from '../../../src/modules/transactions/dashboard/dashboard.controller'
+import { DashboardService } from '../../../src/modules/transactions/dashboard/dashboard.service'
 import { TransactionsController } from '../../../src/modules/transactions/transactions/transactions.controller'
 import { TransactionsService } from '../../../src/modules/transactions/transactions/transactions.service'
 import { TransfersController } from '../../../src/modules/transactions/transfers/transfers.controller'
@@ -26,7 +28,7 @@ class PrismaStubModule {}
 const CONSUMED = Symbol('CONSUMED')
 
 /**
- * What a module of another domain (the dashboard) looks like to `transactions`: it imports the domain module and
+ * What a module of another domain (investments, one day) looks like to `transactions`: it imports the domain module and
  * injects one of its providers.
  */
 @Module({})
@@ -41,13 +43,15 @@ class ConsumerModule {
 }
 
 describe('TransactionsModule', () => {
-  it('wires in the accounts, categories, transactions, transfers and totals features with nothing but Prisma from outside the domain', async () => {
+  it('wires in the accounts, categories, dashboard, transactions, transfers and totals features with nothing but Prisma from outside the domain', async () => {
     const moduleRef = await Test.createTestingModule({ imports: [PrismaStubModule, TransactionsModule] }).compile()
 
     expect(moduleRef.get(AccountsService)).toBeInstanceOf(AccountsService)
     expect(moduleRef.get(AccountsController)).toBeInstanceOf(AccountsController)
     expect(moduleRef.get(CategoriesService)).toBeInstanceOf(CategoriesService)
     expect(moduleRef.get(CategoriesController)).toBeInstanceOf(CategoriesController)
+    expect(moduleRef.get(DashboardService)).toBeInstanceOf(DashboardService)
+    expect(moduleRef.get(DashboardController)).toBeInstanceOf(DashboardController)
     expect(moduleRef.get(TransactionsService)).toBeInstanceOf(TransactionsService)
     expect(moduleRef.get(TransactionsController)).toBeInstanceOf(TransactionsController)
     expect(moduleRef.get(TransfersService)).toBeInstanceOf(TransfersService)

@@ -56,3 +56,4 @@ and mark the old one `Superseded by NNNN`.
 | [0018](./0018-account-balances.md)                   | Account balance computed on read, counted up to a day             | Accepted |
 | [0019](./0019-isolation-tests-against-postgres.md)   | Isolation and database behaviour tested against a real Postgres   | Accepted |
 | [0020](./0020-transaction-totals.md)                 | Transaction totals: one service, rows folded per currency         | Accepted |
+| [0021](./0021-dashboard.md)                          | Dashboard: feature of transactions, windows per currency          | Accepted |

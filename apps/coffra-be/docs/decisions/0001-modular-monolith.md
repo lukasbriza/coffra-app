@@ -1,6 +1,6 @@
 # 0001 – Modular monolith with domain modules
 
-- **Status:** Accepted
+- **Status:** Accepted (the `dashboard` domain amended by [0021](./0021-dashboard.md): the dashboard is a feature of `transactions`, the domains are `core` and `transactions`)
 - **Date:** 2026-10-01
 
 ## Context

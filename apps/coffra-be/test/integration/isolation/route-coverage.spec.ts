@@ -28,7 +28,7 @@ const specSources = (): string[] =>
     .map((file) => readFileSync(path.join(__dirname, file), 'utf8'))
 
 // Every protected route of the app needs an isolation spec: a `describe('<METHOD> <path>', …)` in one of the files of
-// this folder. A new route (the dashboard, …) fails here until it gets one.
+// this folder. A new route fails here until it gets one.
 describe('the isolation specs', () => {
   const { app } = useIntegrationApp({ imports: [DiscoveryModule] })
 
