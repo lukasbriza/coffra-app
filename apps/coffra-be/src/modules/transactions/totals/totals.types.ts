@@ -42,6 +42,24 @@ export type CategoryTotal = {
 }
 
 /**
+ * Income and expense of one currency on one calendar day.
+ *
+ * Every amount is a positive `Prisma.Decimal` of 40 significant digits (`Money`), `0` for the side that has no
+ * transaction, with the same rule about sums as {@link CategoryTotal}: start from one of these values.
+ *
+ * @property currency - three capital letters; the currency of the accounts the transactions are on, never converted
+ * @property date - the day, `YYYY-MM-DD`
+ * @property income - sum of the income of the day, in `currency`
+ * @property expense - sum of the expense of the day, in `currency`
+ */
+export type DayTotal = {
+  currency: string
+  date: string
+  income: Prisma.Decimal
+  expense: Prisma.Decimal
+}
+
+/**
  * The sum of the amounts of one kind of transaction of one account in one category, as the database grouped them.
  *
  * @property accountId - id of the account
@@ -52,6 +70,21 @@ export type CategoryTotal = {
 export type GroupedTotal = {
   accountId: string
   categoryId: string | null
+  type: TransactionType
+  total: Prisma.Decimal
+}
+
+/**
+ * The sum of the amounts of one kind of transaction of one account on one day, as the database grouped them.
+ *
+ * @property accountId - id of the account
+ * @property date - the day, `YYYY-MM-DD`
+ * @property type - kind of the grouped transactions
+ * @property total - sum of the amounts, which are always positive
+ */
+export type DailyGroupedTotal = {
+  accountId: string
+  date: string
   type: TransactionType
   total: Prisma.Decimal
 }

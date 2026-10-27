@@ -7,11 +7,12 @@ import { DashboardService } from '../../../../../src/modules/transactions/dashbo
 import { TransactionTotalsService } from '../../../../../src/modules/transactions/totals/totals.service'
 
 const categoryTotals = (): Promise<[]> => Promise.resolve([])
+const dailyTotals = (): Promise<[]> => Promise.resolve([])
 
 describe('DashboardService dependency injection', () => {
   it('resolves TransactionTotalsService through @Inject', async () => {
     const moduleRef = await Test.createTestingModule({
-      providers: [DashboardService, { provide: TransactionTotalsService, useValue: { categoryTotals } }],
+      providers: [DashboardService, { provide: TransactionTotalsService, useValue: { categoryTotals, dailyTotals } }],
     }).compile()
 
     await expect(moduleRef.get(DashboardService).get({ userId: 'user-1' }, {})).resolves.toMatchObject({

@@ -59,6 +59,32 @@ export const groupQuery = (from: Date = FROM, to: Date = TO) => ({
   _sum: { amount: true },
 })
 
+/** One row of what `groupBy` returns for the daily sums: an account, a kind of transaction and a day (midnight UTC). */
+export type DailyGroup = {
+  accountId: string
+  type: TransactionType
+  date: Date
+  _sum: { amount: Prisma.Decimal | null }
+}
+
+export const dailyGroup = (accountId: string, date: string, type: TransactionType, amount: string): DailyGroup => ({
+  accountId,
+  type,
+  date: new Date(`${date}T00:00:00.000Z`),
+  _sum: { amount: new Prisma.Decimal(amount) },
+})
+
+export const dailyIncome = (accountId: string, date: string, amount: string): DailyGroup =>
+  dailyGroup(accountId, date, TransactionType.income, amount)
+export const dailyExpense = (accountId: string, date: string, amount: string): DailyGroup =>
+  dailyGroup(accountId, date, TransactionType.expense, amount)
+
+/** The aggregation behind the daily sums: the same filter as `groupQuery`, grouped by account, type and day. */
+export const dailyQuery = (from: Date = FROM, to: Date = TO) => ({
+  ...groupQuery(from, to),
+  by: ['accountId', 'type', 'date'],
+})
+
 type AccountRow = { id: string; currency: string }
 type CategoryRow = { id: string; name: string }
 
@@ -67,7 +93,7 @@ type CategoryRow = { id: string; name: string }
  * `beforeEach` that resets the mocks for that block. Nothing is found unless a spec says otherwise.
  */
 export const useTotalsService = () => {
-  const groupBy = vi.fn<(args: unknown) => Promise<Group[]>>()
+  const groupBy = vi.fn<(args: unknown) => Promise<(Group | DailyGroup)[]>>()
   const findAccounts = vi.fn<(args: unknown) => Promise<AccountRow[]>>()
   const findCategories = vi.fn<(args: unknown) => Promise<CategoryRow[]>>()
   const prisma = {

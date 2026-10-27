@@ -35,7 +35,25 @@ export type CategorySummary = {
 }
 
 /**
- * The totals of one currency and the categories they are made of.
+ * Income and expense of one currency in one calendar month of the window of the dashboard.
+ *
+ * Every amount is a `Money` value (`Prisma.Decimal` with 40 significant digits), so adding and subtracting them stays
+ * exact.
+ *
+ * @property month - the calendar month in UTC, `YYYY-MM`
+ * @property income - sum of the income of the month; `0` when there is none
+ * @property expense - sum of the expense of the month; `0` when there is none
+ * @property net - `income` minus `expense`; negative when more was spent than earned
+ */
+export type MonthSummary = {
+  month: string
+  income: Prisma.Decimal
+  expense: Prisma.Decimal
+  net: Prisma.Decimal
+}
+
+/**
+ * The totals of one currency, the categories they are made of and the months they are spread over.
  *
  * @property currency - three capital letters; amounts of two currencies are never added
  * @property income - sum of the income of every category
@@ -43,6 +61,7 @@ export type CategorySummary = {
  * @property net - `income` minus `expense`
  * @property categories - the categories, the one with the largest `income + expense` first, the transactions without a
  * category last
+ * @property trend - every month of the window, the oldest first, with zeros in a month without a transaction
  */
 export type CurrencySummary = {
   currency: string
@@ -50,6 +69,7 @@ export type CurrencySummary = {
   expense: Prisma.Decimal
   net: Prisma.Decimal
   categories: CategorySummary[]
+  trend: MonthSummary[]
 }
 
 /**
@@ -70,6 +90,21 @@ export type CategoryView = {
 }
 
 /**
+ * What the API returns for a month.
+ *
+ * @property month - the calendar month in UTC, `YYYY-MM`
+ * @property income - sum of the income of the month, a decimal string with four decimal places, e.g. `"26000.0000"`
+ * @property expense - sum of the expense of the month
+ * @property net - `income` minus `expense`, e.g. `"-300.2500"`
+ */
+export type MonthView = {
+  month: string
+  income: string
+  expense: string
+  net: string
+}
+
+/**
  * What the API returns for a currency.
  *
  * @property currency - three capital letters
@@ -78,6 +113,8 @@ export type CategoryView = {
  * @property net - `income` minus `expense`
  * @property categories - the categories the totals are made of, the largest first, the transactions without a category
  * last
+ * @property trend - the months of the window, the oldest first, as many as the period covers; a month without a
+ * transaction has zeros
  */
 export type CurrencyView = {
   currency: string
@@ -85,6 +122,7 @@ export type CurrencyView = {
   expense: string
   net: string
   categories: CategoryView[]
+  trend: MonthView[]
 }
 
 /**

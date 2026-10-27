@@ -57,3 +57,4 @@ and mark the old one `Superseded by NNNN`.
 | [0019](./0019-isolation-tests-against-postgres.md)   | Isolation and database behaviour tested against a real Postgres   | Accepted |
 | [0020](./0020-transaction-totals.md)                 | Transaction totals: one service, rows folded per currency         | Accepted |
 | [0021](./0021-dashboard.md)                          | Dashboard: feature of transactions, windows per currency          | Accepted |
+| [0022](./0022-dashboard-trend.md)                    | Dashboard trend: totals by day, folded into months                | Accepted |

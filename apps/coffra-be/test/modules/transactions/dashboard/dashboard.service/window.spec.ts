@@ -2,21 +2,36 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { TIME_ZONES, useTimeZone } from '../../../../utils/use-time-zone'
 
-import { OWNER, useDashboardService } from './setup'
+import { OWNER, row, useDashboardService } from './setup'
 
 // The window follows the UTC day of the clock, never the local one: the server may stand anywhere, and the API speaks
 // UTC. Each case sits at the very edge of a UTC day, where the local day is a different one east or west of UTC.
 describe.each(TIME_ZONES)('DashboardService.get with the server in %s', (zone, offset) => {
   useTimeZone(zone, offset)
 
-  const { service, categoryTotals } = useDashboardService()
+  const { service, categoryTotals, dailyTotals } = useDashboardService()
 
-  /** Stops the clock at `instant` and returns the window the dashboard asked the totals service for. */
+  /**
+   * Stops the clock at `instant` and returns the window the dashboard asked the totals service for. The totals by day
+   * are asked for the same window.
+   */
   const windowAt = async (instant: string, period: '3m' | '6m' | '1y' = '3m') => {
     vi.setSystemTime(new Date(instant))
     await service.get(OWNER, { period })
 
+    expect(dailyTotals.mock.calls.at(-1)?.[1]).toStrictEqual(categoryTotals.mock.calls.at(-1)?.[1])
+
     return categoryTotals.mock.calls.at(-1)?.[1]
+  }
+
+  /** Stops the clock at `instant` and returns the months of the trend of a currency the dashboard shows. */
+  const monthsAt = async (instant: string): Promise<string[]> => {
+    categoryTotals.mockResolvedValue([row('CZK', null, '1', '0')])
+    vi.setSystemTime(new Date(instant))
+
+    const { currencies } = await service.get(OWNER, {})
+
+    return currencies[0]?.trend.map(({ month }) => month) ?? []
   }
 
   it('is still October in the last second of 31 October UTC', async () => {
@@ -34,6 +49,11 @@ describe.each(TIME_ZONES)('DashboardService.get with the server in %s', (zone, o
   it('crosses the turn of the year at midnight UTC, not at the local midnight', async () => {
     expect(await windowAt('2025-12-31T23:59:59.000Z', '1y')).toStrictEqual({ from: '2025-01-01', to: '2025-12-31' })
     expect(await windowAt('2026-01-01T00:00:00.000Z', '1y')).toStrictEqual({ from: '2025-02-01', to: '2026-01-31' })
+  })
+
+  it('names the months of the trend by the UTC day too: October until the last second, November from the first', async () => {
+    expect(await monthsAt('2026-10-31T23:59:59.000Z')).toStrictEqual(['2026-08', '2026-09', '2026-10'])
+    expect(await monthsAt('2026-11-01T00:00:00.000Z')).toStrictEqual(['2026-09', '2026-10', '2026-11'])
   })
 })
 

@@ -3,6 +3,7 @@ import { PERIOD_MONTHS } from '../constants'
 import type { Period } from '../dashboard.types'
 
 import { dayInMonth } from './day-in-month'
+import { monthIndex } from './month-index'
 
 /**
  * Works out which days a period of the dashboard covers.
@@ -26,7 +27,7 @@ import { dayInMonth } from './day-in-month'
  */
 export const periodWindow = (period: Period, today: string): TotalsRange => {
   // The index of the current month, counted from the year 0 (see `dayInMonth`).
-  const current = Number(today.slice(0, 4)) * 12 + (Number(today.slice(5, 7)) - 1)
+  const current = monthIndex(today)
 
   return {
     from: dayInMonth(current - (PERIOD_MONTHS[period] - 1), 'first'),

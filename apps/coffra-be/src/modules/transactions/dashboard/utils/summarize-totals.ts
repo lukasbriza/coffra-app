@@ -1,12 +1,12 @@
 import { Money } from '../../common/money'
 import type { CategoryTotal } from '../../totals/totals.types'
-import type { CurrencySummary } from '../dashboard.types'
+import type { CurrencySummary, MonthSummary } from '../dashboard.types'
 
 import { compareCategories } from './compare-categories'
 
 /**
  * Turns the totals per currency and category into what the dashboard shows: a total of every currency and the
- * categories it is made of, each with its net.
+ * categories it is made of, each with its net, and the months the currency is spread over.
  *
  * For example, with two currencies:
  *
@@ -19,12 +19,19 @@ import { compareCategories } from './compare-categories'
  *                                                    Food   · income 0 · expense 10 · net -10
  * ```
  *
- * The amounts are added and subtracted as `Money`, so a total of many large amounts stays exact.
+ * The amounts are added and subtracted as `Money`, so a total of many large amounts stays exact. The months are not
+ * worked out here: they come from the totals by day, which are a separate read.
  *
  * @param rows - the totals per currency and category, ordered by currency
+ * @param trends - the months of every currency in `rows`, by currency
  * @returns one summary per currency in the order the rows came in; empty when there are no rows
+ * @throws Error when a currency of `rows` has no series in `trends`: the caller makes a series for every currency it
+ * passes in, so this is a broken invariant
  */
-export const summarizeTotals = (rows: readonly CategoryTotal[]): CurrencySummary[] => {
+export const summarizeTotals = (
+  rows: readonly CategoryTotal[],
+  trends: ReadonlyMap<string, readonly MonthSummary[]>,
+): CurrencySummary[] => {
   // The summaries by currency, in the order the currencies first appear; filled while we walk through the rows.
   const summaries = new Map<string, CurrencySummary>()
 
@@ -37,6 +44,7 @@ export const summarizeTotals = (rows: readonly CategoryTotal[]): CurrencySummary
       expense: new Money(0),
       net: new Money(0),
       categories: [],
+      trend: [],
     }
 
     // 2. Add the row to the totals of the currency.
@@ -55,10 +63,20 @@ export const summarizeTotals = (rows: readonly CategoryTotal[]): CurrencySummary
     summaries.set(currency, summary)
   }
 
-  // 4. Now that every row is in, finish each currency: its net and its categories in the order of the dashboard.
-  return [...summaries.values()].map((summary) => ({
-    ...summary,
-    net: summary.income.minus(summary.expense),
-    categories: summary.categories.toSorted(compareCategories),
-  }))
+  // 4. Now that every row is in, finish each currency: its net, its categories in the order of the dashboard and its
+  // months.
+  return [...summaries.values()].map((summary) => {
+    const trend = trends.get(summary.currency)
+
+    if (trend === undefined) {
+      throw new Error('A currency of the totals has no series of months')
+    }
+
+    return {
+      ...summary,
+      net: summary.income.minus(summary.expense),
+      categories: summary.categories.toSorted(compareCategories),
+      trend: [...trend],
+    }
+  })
 }

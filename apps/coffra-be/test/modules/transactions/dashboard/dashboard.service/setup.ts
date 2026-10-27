@@ -6,7 +6,7 @@ import type { Owner } from '../../../../../src/modules/core'
 import { Money } from '../../../../../src/modules/transactions/common/money'
 import { DashboardService } from '../../../../../src/modules/transactions/dashboard/dashboard.service'
 import type { TransactionTotalsService } from '../../../../../src/modules/transactions/totals/totals.service'
-import type { CategoryTotal } from '../../../../../src/modules/transactions/totals/totals.types'
+import type { CategoryTotal, DayTotal } from '../../../../../src/modules/transactions/totals/totals.types'
 
 // Shared by the use case specs of `DashboardService`. The totals service is a mock: what the dashboard asks of it is
 // pinned here, what it answers is made up by each spec.
@@ -42,19 +42,50 @@ export const row = (
 })
 
 /**
+ * A row of the totals by day: the amounts are `Money`, as the service returns them.
+ *
+ * @param currency - three capital letters
+ * @param date - the day, `YYYY-MM-DD`
+ * @param income - sum of the income of the day
+ * @param expense - sum of the expense of the day
+ * @returns the row
+ */
+export const day = (currency: string, date: string, income: string, expense: string): DayTotal => ({
+  currency,
+  date,
+  income: new Money(income),
+  expense: new Money(expense),
+})
+
+/** The months of the window of `3m` at `NOW`: the current month and the two before it. */
+export const MONTHS_3M = ['2026-08', '2026-09', '2026-10']
+
+/**
+ * The months of a trend as the API writes them, all with zeros: what a currency shows when no day of the window
+ * falls in them.
+ *
+ * @param months - the months, `YYYY-MM`, the oldest first
+ * @returns the trend
+ */
+export const zeroTrend = (months: string[] = MONTHS_3M) =>
+  months.map((month) => ({ month, income: '0.0000', expense: '0.0000', net: '0.0000' }))
+
+/**
  * The service over a mocked totals service, with the clock stopped at `NOW`. Call it inside a `describe`: it registers
  * the `beforeEach` and `afterEach` for that block. The totals service answers no rows unless a spec says otherwise.
  *
  * Only `Date` is faked, so timers and promises behave as usual; a spec moves the clock with `vi.setSystemTime`.
  *
- * @returns the service and the mock behind it
+ * @returns the service and the mocks behind it
  */
 export const useDashboardService = () => {
   const categoryTotals = vi.fn<TransactionTotalsService['categoryTotals']>()
-  const service = new DashboardService({ categoryTotals } as unknown as TransactionTotalsService)
+  const dailyTotals = vi.fn<TransactionTotalsService['dailyTotals']>()
+  const service = new DashboardService({ categoryTotals, dailyTotals } as unknown as TransactionTotalsService)
 
   beforeEach(() => {
     categoryTotals.mockReset().mockResolvedValue([])
+    dailyTotals.mockReset().mockResolvedValue([])
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date(NOW))
   })
@@ -63,5 +94,5 @@ export const useDashboardService = () => {
     vi.useRealTimers()
   })
 
-  return { service, categoryTotals }
+  return { service, categoryTotals, dailyTotals }
 }

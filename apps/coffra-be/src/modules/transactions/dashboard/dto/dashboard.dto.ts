@@ -3,6 +3,8 @@ import { ApiProperty } from '@nestjs/swagger'
 import { PERIODS } from '../constants'
 import type { CategoryView, CurrencyView, DashboardView, Period } from '../dashboard.types'
 
+import { MonthTotalsDto } from './month-totals.dto'
+
 /** Swagger shape of `CategoryView`: the same fields, described for the schema of the API. */
 export class CategoryTotalsDto implements CategoryView {
   @ApiProperty({
@@ -63,6 +65,13 @@ export class CurrencyTotalsDto implements CurrencyView {
       'The categories the totals are made of, the one with the largest `income + expense` first. The transactions without a category are the last row.',
   })
   categories!: CategoryTotalsDto[]
+
+  @ApiProperty({
+    type: [MonthTotalsDto],
+    description:
+      'The totals month by month, the oldest first: one entry for every calendar month of the window (3, 6 or 12), so a month without a transaction is there with zeros. The months add up to the totals of the currency.',
+  })
+  trend!: MonthTotalsDto[]
 }
 
 /** Swagger shape of `DashboardView`: the same fields, described for the schema of the API. */

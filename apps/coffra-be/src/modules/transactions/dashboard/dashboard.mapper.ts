@@ -7,6 +7,8 @@ import type {
   CurrencySummary,
   CurrencyView,
   DashboardView,
+  MonthSummary,
+  MonthView,
   Period,
 } from './dashboard.types'
 
@@ -25,17 +27,31 @@ const toCategoryView = ({ categoryId, name, income, expense, net }: CategorySumm
 })
 
 /**
- * Writes the amounts of a currency, and of the categories in it, as decimal strings.
+ * Writes the amounts of a month as decimal strings.
  *
- * @param summary - the currency with its totals and categories
+ * @param month - the month with its amounts
+ * @returns the month as the API shows it
+ */
+const toMonthView = ({ month, income, expense, net }: MonthSummary): MonthView => ({
+  month,
+  income: formatMoney(income),
+  expense: formatMoney(expense),
+  net: formatMoney(net),
+})
+
+/**
+ * Writes the amounts of a currency, and of the categories and the months in it, as decimal strings.
+ *
+ * @param summary - the currency with its totals, categories and months
  * @returns the currency as the API shows it
  */
-const toCurrencyView = ({ currency, income, expense, net, categories }: CurrencySummary): CurrencyView => ({
+const toCurrencyView = ({ currency, income, expense, net, categories, trend }: CurrencySummary): CurrencyView => ({
   currency,
   income: formatMoney(income),
   expense: formatMoney(expense),
   net: formatMoney(net),
   categories: categories.map(toCategoryView),
+  trend: trend.map(toMonthView),
 })
 
 /**

@@ -10,13 +10,49 @@ import type { Persona } from '../support/world'
  */
 const CLOCK = '2026-02-15T12:00:00.000Z'
 
-type Dashboard = { currencies: { currency: string }[] }
+type Dashboard = { currencies: { currency: string; trend: { month: string; income: string }[] }[] }
 
 type Figures = { income: string; expense: string; net: string }
 
 /** What the seed adds up to for `a`, and for `b` (a thousand times as much): the income, the expense and the net. */
 const A_FIGURES: Figures = { income: '2500.0000', expense: '300.2500', net: '2199.7500' }
 const B_FIGURES: Figures = { income: '2500000.0000', expense: '300250.0000', net: '2199750.0000' }
+
+/** The month every seeded income and expense is dated in. */
+const SEED_MONTH = '2026-01'
+
+/**
+ * The months a window covers, the oldest first. Worked out with `Date`, so it does not share the arithmetic of the
+ * code it checks.
+ *
+ * @param window - the first and the last day of the window
+ * @returns the months as `YYYY-MM`
+ */
+const monthsOf = ({ from, to }: { from: string; to: string }): string[] => {
+  const months: string[] = []
+  const last = to.slice(0, 7)
+  let first = new Date(`${from.slice(0, 7)}-01T00:00:00.000Z`)
+
+  while (first.toISOString().slice(0, 7) <= last) {
+    months.push(first.toISOString().slice(0, 7))
+    first = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 1))
+  }
+
+  return months
+}
+
+/**
+ * The trend the seed gives a user: every month of the window, with the figures of the seed in January 2026 and zeros in
+ * the others.
+ *
+ * @param figures - the amounts of the seed of that user
+ * @param window - the days the window covers
+ * @returns the months of the answer
+ */
+const seededTrend = (figures: Figures, window: { from: string; to: string }) =>
+  monthsOf(window).map((month) =>
+    month === SEED_MONTH ? { month, ...figures } : { month, income: '0.0000', expense: '0.0000', net: '0.0000' },
+  )
 
 /**
  * The dashboard the seed gives a user: one currency (CZK; the euro account has only an opening balance, and the
@@ -33,6 +69,7 @@ const seeded = (persona: Persona, figures: Figures, window: { period: string; fr
     {
       currency: 'CZK',
       ...figures,
+      trend: seededTrend(figures, window),
       categories: [
         {
           categoryId: persona.categories.salary,
@@ -136,6 +173,17 @@ describe('isolation of the dashboard', () => {
       const response = await as(a).get('/api/dashboard').expect(200)
 
       expect(response.body).toStrictEqual(seeded(a, A_FIGURES, WINDOW))
+    })
+
+    it('spreads the figures of the caller over the months: January holds them all, the other months are zeros', async () => {
+      const { a } = await atClock(CLOCK)
+
+      const {
+        currencies: [czk],
+      } = await dashboardOf(a)
+
+      expect(czk.trend.map(({ month }) => month)).toStrictEqual(['2025-12', '2026-01', '2026-02'])
+      expect(czk.trend.map(({ income }) => income)).toStrictEqual(['0.0000', A_FIGURES.income, '0.0000'])
     })
 
     it('gives the other user the same shape with their own figures (control)', async () => {

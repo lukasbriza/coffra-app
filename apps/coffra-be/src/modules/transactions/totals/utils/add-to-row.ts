@@ -10,7 +10,10 @@ import type { CategoryTotal, GroupedTotal } from '../totals.types'
  * @param group - the group whose `type` says the side and whose `total` says the amount
  * @throws Error for a transfer: the query leaves transfers out, so one here is a broken invariant
  */
-export const addToRow = (row: CategoryTotal, { type, total }: GroupedTotal): void => {
+export const addToRow = (
+  row: Pick<CategoryTotal, 'income' | 'expense'>,
+  { type, total }: Pick<GroupedTotal, 'type' | 'total'>,
+): void => {
   switch (type) {
     case TransactionType.income: {
       row.income = row.income.plus(total)

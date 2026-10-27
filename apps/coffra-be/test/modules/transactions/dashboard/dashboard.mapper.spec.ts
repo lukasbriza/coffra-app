@@ -16,6 +16,11 @@ const summary: CurrencySummary = {
     { categoryId: FOOD, name: 'Food', income: new Money(0), expense: new Money('150.25'), net: new Money('-150.25') },
     { categoryId: null, name: null, income: new Money('5000'), expense: new Money(0), net: new Money('5000') },
   ],
+  trend: [
+    { month: '2026-08', income: new Money('5000'), expense: new Money(0), net: new Money('5000') },
+    { month: '2026-09', income: new Money(0), expense: new Money(0), net: new Money(0) },
+    { month: '2026-10', income: new Money(0), expense: new Money('150.25'), net: new Money('-150.25') },
+  ],
 }
 
 describe('toDashboardView', () => {
@@ -34,8 +39,58 @@ describe('toDashboardView', () => {
             { categoryId: FOOD, name: 'Food', income: '0.0000', expense: '150.2500', net: '-150.2500' },
             { categoryId: null, name: null, income: '5000.0000', expense: '0.0000', net: '5000.0000' },
           ],
+          trend: [
+            { month: '2026-08', income: '5000.0000', expense: '0.0000', net: '5000.0000' },
+            { month: '2026-09', income: '0.0000', expense: '0.0000', net: '0.0000' },
+            { month: '2026-10', income: '0.0000', expense: '150.2500', net: '-150.2500' },
+          ],
         },
       ],
+    })
+  })
+
+  it('keeps the months in the order they were given and writes each as it was named', () => {
+    const view = toDashboardView('3m', WINDOW, [summary])
+
+    expect(view.currencies[0]?.trend.map(({ month }) => month)).toStrictEqual(['2026-08', '2026-09', '2026-10'])
+  })
+
+  it('writes a currency without a month as an empty trend', () => {
+    expect(toDashboardView('3m', WINDOW, [{ ...summary, trend: [] }]).currencies[0]?.trend).toStrictEqual([])
+  })
+
+  it('writes the amounts of a month with four decimal places, a tiny one without an exponent', () => {
+    const tiny: CurrencySummary = {
+      ...summary,
+      trend: [{ month: '2026-10', income: new Money('0.0000001'), expense: new Money(0), net: new Money('0.0000001') }],
+    }
+
+    expect(toDashboardView('3m', WINDOW, [tiny]).currencies[0]?.trend[0]).toStrictEqual({
+      month: '2026-10',
+      income: '0.0000',
+      expense: '0.0000',
+      net: '0.0000',
+    })
+  })
+
+  it('writes the amount of a month of more than 20 digits in full', () => {
+    const big: CurrencySummary = {
+      ...summary,
+      trend: [
+        {
+          month: '2026-10',
+          income: new Money('19999999999999999.9981'),
+          expense: new Money('0.0001'),
+          net: new Money('19999999999999999.9980'),
+        },
+      ],
+    }
+
+    expect(toDashboardView('3m', WINDOW, [big]).currencies[0]?.trend[0]).toStrictEqual({
+      month: '2026-10',
+      income: '19999999999999999.9981',
+      expense: '0.0001',
+      net: '19999999999999999.9980',
     })
   })
 

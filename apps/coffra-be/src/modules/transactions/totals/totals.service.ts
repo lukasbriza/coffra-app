@@ -1,11 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common'
 
-import { parseIsoDate } from '../../../utils'
+import { formatIsoDate, parseIsoDate } from '../../../utils'
 import { type Owner, OwnershipService } from '../../core'
-import { PrismaService } from '../../prisma'
+import { type Prisma, PrismaService } from '../../prisma'
 import { INCOME_EXPENSE_TYPES } from '../transactions/constants'
 
-import type { CategoryTotal, GroupedTotal, TotalsRange } from './totals.types'
+import type { CategoryTotal, DailyGroupedTotal, DayTotal, GroupedTotal, TotalsRange } from './totals.types'
+import { foldDays } from './utils/fold-days'
 import { foldGroups } from './utils/fold-groups'
 
 /**
@@ -73,6 +74,41 @@ export class TransactionTotalsService {
   }
 
   /**
+   * Adds up the income and the expense of the owner over a range of days, by currency and day.
+   *
+   * It counts the same transactions as {@link categoryTotals} for the same range: transfers and the opening balance of
+   * an account are left out, a transaction dated in the future counts when its day is in the range. A day without a
+   * transaction has no row, so the result is sparse. The amounts of two accounts in the same currency are added, nothing
+   * is converted between currencies.
+   *
+   * It works in three steps: the database adds up the amounts per account, type and day; then the currency of each
+   * account is read; then `foldDays` merges the accounts of one currency.
+   *
+   * @param owner - whose transactions to add up
+   * @param range - the first and the last day, both inclusive
+   * @returns one row per currency and day that has a transaction, ordered by currency, then by day; empty when nothing
+   * falls in the range
+   * @throws Error when the data breaks an invariant (a null sum, a transaction on an account the owner does not have):
+   * that is a fault, not a client error
+   */
+  async dailyTotals(owner: Owner, { from, to }: TotalsRange): Promise<DayTotal[]> {
+    // 1. Let the database add up the amounts: one sum per account, day and kind (income or expense).
+    const groups = await this.groupDaily(owner, from, to)
+
+    // 2. Nothing in the range: there is nothing more to read.
+    if (groups.length === 0) {
+      return []
+    }
+
+    // 3. Read the currency of the accounts the sums refer to. This comes after the sums on purpose: an account that has
+    // a transaction cannot be deleted, so everything the sums refer to is still there to read.
+    const currencies = await this.readCurrencies(owner, [...new Set(groups.map(({ accountId }) => accountId))])
+
+    // 4. Merge the sums of the accounts that share a currency and a day into one row.
+    return foldDays(groups, currencies)
+  }
+
+  /**
    * Adds up the income and the expense of the owner in the database, without loading rows.
    *
    * One query grouped by account, category and type. The owner scope is in the filter; transfers are out of it by type.
@@ -86,14 +122,7 @@ export class TransactionTotalsService {
   private async groupTotals(owner: Owner, from: string, to: string): Promise<GroupedTotal[]> {
     const groups = await this.prisma.transaction.groupBy({
       by: ['accountId', 'categoryId', 'type'],
-      where: {
-        // Only transactions on accounts of the owner.
-        account: this.ownership.scope(owner),
-        // Only income and expense: a transfer just moves money between accounts.
-        type: { in: [...INCOME_EXPENSE_TYPES] },
-        // `DATE` column and midnight UTC of both days: `gte` and `lte` keep both whole days.
-        date: { gte: parseIsoDate(from), lte: parseIsoDate(to) },
-      },
+      where: this.incomeExpenseWhere(owner, from, to),
       _sum: { amount: true },
     })
 
@@ -105,6 +134,56 @@ export class TransactionTotalsService {
 
       return { accountId, categoryId, type, total: _sum.amount }
     })
+  }
+
+  /**
+   * Adds up the income and the expense of the owner in the database by day, without loading rows.
+   *
+   * One query grouped by account, type and day. The filter is the one of {@link groupTotals}.
+   *
+   * @param owner - whose transactions to add up
+   * @param from - first day, `YYYY-MM-DD`
+   * @param to - last day, `YYYY-MM-DD`
+   * @returns the sums by account, type and day; empty when nothing matches
+   * @throws Error when a group has a null sum: a group exists for at least one row and `amount` is never null
+   */
+  private async groupDaily(owner: Owner, from: string, to: string): Promise<DailyGroupedTotal[]> {
+    const groups = await this.prisma.transaction.groupBy({
+      by: ['accountId', 'type', 'date'],
+      where: this.incomeExpenseWhere(owner, from, to),
+      _sum: { amount: true },
+    })
+
+    return groups.map(({ accountId, type, date, _sum }) => {
+      // A group exists for at least one row and an amount is never null, so a null sum is a fault.
+      if (_sum.amount === null) {
+        throw new Error('The sum of a group of transactions is null')
+      }
+
+      // A `DATE` column comes back as midnight UTC of its day, which `formatIsoDate` writes back in UTC.
+      return { accountId, date: formatIsoDate(date), type, total: _sum.amount }
+    })
+  }
+
+  /**
+   * The filter of every sum: transactions of the owner that are income or expense and dated in the range.
+   *
+   * It is written once so that no sum can forget the owner scope or count a transfer.
+   *
+   * @param owner - whose transactions to match
+   * @param from - first day, `YYYY-MM-DD`
+   * @param to - last day, `YYYY-MM-DD`
+   * @returns the `where` of a query on `Transaction`
+   */
+  private incomeExpenseWhere(owner: Owner, from: string, to: string): Prisma.TransactionWhereInput {
+    return {
+      // Only transactions on accounts of the owner.
+      account: this.ownership.scope(owner),
+      // Only income and expense: a transfer just moves money between accounts.
+      type: { in: [...INCOME_EXPENSE_TYPES] },
+      // `DATE` column and midnight UTC of both days: `gte` and `lte` keep both whole days.
+      date: { gte: parseIsoDate(from), lte: parseIsoDate(to) },
+    }
   }
 
   /**

@@ -26,6 +26,11 @@ export const VIEW: DashboardView = {
         { categoryId: CATEGORY_ID, name: 'Food', income: '0.0000', expense: '150.2500', net: '-150.2500' },
         { categoryId: null, name: null, income: '5000.0000', expense: '0.0000', net: '5000.0000' },
       ],
+      trend: [
+        { month: '2026-08', income: '5000.0000', expense: '0.0000', net: '5000.0000' },
+        { month: '2026-09', income: '0.0000', expense: '0.0000', net: '0.0000' },
+        { month: '2026-10', income: '0.0000', expense: '150.2500', net: '-150.2500' },
+      ],
     },
   ],
 }
