@@ -1,7 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
+import { parseIsoDate } from '../../../src/utils'
+import { stopClock } from '../support/clock'
 import { useIntegrationApp } from '../support/use-integration-app'
-import type { Persona } from '../support/world'
+import type { Persona, World } from '../support/world'
 
 /**
  * Where the clock stands: with it the window of `3m` is 2025-12-01 .. 2026-02-28 and holds every seeded day (all in
@@ -98,18 +100,10 @@ const WINDOW = { period: '3m', from: '2025-12-01', to: '2026-02-28' }
 // The dashboard against writes of the other user. The seed gives both users the same structure, `b` a thousand times
 // the amounts, so a row of `b` that reached the figures of `a` cannot go unnoticed.
 describe('isolation of the dashboard', () => {
-  const { as, anonymous, world, issueToken, unchanged } = useIntegrationApp()
+  const { as, anonymous, world, prisma, issueToken, unchanged, expectErrors } = useIntegrationApp()
 
   /** Stops the clock at `instant` and gives both users a token signed by that clock (the seeded ones are not). */
-  const atClock = async (instant: string): Promise<{ a: Persona; b: Persona }> => {
-    vi.useFakeTimers({ toFake: ['Date'], now: new Date(instant) })
-    const { a, b } = world()
-
-    return {
-      a: { ...a, token: await issueToken(a.userId) },
-      b: { ...b, token: await issueToken(b.userId) },
-    }
-  }
+  const atClock = (instant: string): Promise<World> => stopClock(instant, world(), issueToken)
 
   /** The dashboard `persona` is shown, as the API answered it. */
   const dashboardOf = async (persona: Pick<Persona, 'token'>, query = ''): Promise<Dashboard> => {
@@ -144,6 +138,27 @@ describe('isolation of the dashboard', () => {
         toAccountId: b.accounts.empty,
         amount: '77',
         date: '2026-01-01',
+      })
+      .expect(201)
+
+    // Other months of the window than the one the seed lives in, the first and the last day of them: the months of the
+    // trend of `a` must stay zeros.
+    await as(b)
+      .post('/api/transactions', {
+        accountId: b.accounts.main,
+        type: 'income',
+        amount: '123',
+        date: '2025-12-31',
+        categoryId: b.categories.food,
+      })
+      .expect(201)
+    await as(b)
+      .post('/api/transactions', {
+        accountId: b.accounts.main,
+        type: 'expense',
+        amount: '9',
+        date: '2026-02-28',
+        categoryId: b.categories.salary,
       })
       .expect(201)
 
@@ -217,6 +232,36 @@ describe('isolation of the dashboard', () => {
 
       expect(after).not.toStrictEqual(before)
       expect(after.currencies.map(({ currency }) => currency)).toStrictEqual(['CZK', 'USD'])
+    })
+
+    it('never names a category of the other user, even when a transaction of the caller points at it', async () => {
+      const { a, b } = await atClock(CLOCK)
+      const secret = 'Secret category of the other user'
+      await prisma().category.update({ where: { id: b.categories.salary }, data: { name: secret } })
+
+      // Control: the owner of the category is shown its name, and the caller is answered before the bad row exists.
+      const own = await as(b).get('/api/dashboard').expect(200)
+      expect(JSON.stringify(own.body)).toContain(secret)
+      await as(a).get('/api/dashboard').expect(200)
+
+      // The API never writes this (a transaction with a foreign category is a 404), but nothing in the database stops
+      // it: the row is written straight through Prisma, as a bug elsewhere could write it.
+      await prisma().transaction.create({
+        data: {
+          accountId: a.accounts.main,
+          type: 'income',
+          amount: '1',
+          date: parseIsoDate('2026-01-20'),
+          categoryId: b.categories.salary,
+        },
+      })
+      expectErrors()
+
+      const response = await as(a).get('/api/dashboard')
+
+      // A fault, not a name: the category of the sum is not found through the scope of the caller.
+      expect(response.status).toBe(500)
+      expect(JSON.stringify(response.body)).not.toContain(secret)
     })
 
     it('takes the owner from the token only: the query cannot name another one', async () => {
