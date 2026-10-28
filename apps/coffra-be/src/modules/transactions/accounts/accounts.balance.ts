@@ -1,10 +1,7 @@
-import { Prisma, TransactionType, TransferDirection } from '../../prisma'
+import { type Prisma, TransactionType, TransferDirection } from '../../prisma'
+import { Money } from '../common/money'
 
 import type { BalanceTotal } from './accounts.types'
-import { BALANCE_PRECISION } from './constants'
-
-/** Decimal arithmetic with `BALANCE_PRECISION` significant digits, so a sum of many large amounts stays exact. */
-const Money = Prisma.Decimal.clone({ precision: BALANCE_PRECISION })
 
 /**
  * Tells whether a kind of transaction adds to the balance or takes from it.
@@ -44,7 +41,7 @@ const signOf = ({ type, transferDirection }: BalanceTotal): 1 | -1 => {
  *
  * @param openingBalance - balance before the first recorded transaction
  * @param totals - sums grouped by type and direction, in any order; empty for an account without transactions
- * @returns the balance, exact up to `BALANCE_PRECISION` significant digits; may be negative
+ * @returns the balance, exact up to `SUM_PRECISION` significant digits; may be negative
  * @throws Error when a transfer total has no direction
  */
 export const balanceOf = (openingBalance: Prisma.Decimal, totals: readonly BalanceTotal[]): Prisma.Decimal => {

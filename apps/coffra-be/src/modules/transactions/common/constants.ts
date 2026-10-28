@@ -2,6 +2,13 @@
 export const MONEY_SCALE = 4
 
 /**
+ * Significant digits of the arithmetic that adds amounts up. The default of `Prisma.Decimal` (20) rounds a sum above
+ * about 10^16 silently; a column holds 15 integer digits and four decimal places, so a few full amounts already exceed
+ * it.
+ */
+export const SUM_PRECISION = 40
+
+/**
  * A signed decimal string that fits `Decimal(19,4)`: at most 15 integer digits and 4 decimal places, a plain `.` as
  * the separator, no exponent, no `+`. Anything bigger would overflow the column (a 500), anything finer be rounded.
  */
