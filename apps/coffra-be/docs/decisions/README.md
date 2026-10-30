@@ -58,3 +58,4 @@ and mark the old one `Superseded by NNNN`.
 | [0020](./0020-transaction-totals.md)                 | Transaction totals: one service, rows folded per currency         | Accepted |
 | [0021](./0021-dashboard.md)                          | Dashboard: feature of transactions, windows per currency          | Accepted |
 | [0022](./0022-dashboard-trend.md)                    | Dashboard trend: totals by day, folded into months                | Accepted |
+| [0023](./0023-container-image.md)                    | Container image: shared Dockerfile, migrations as a command       | Accepted |

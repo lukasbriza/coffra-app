@@ -21,8 +21,6 @@
     "ts": "tsc --build tsconfig.json"
   },
   "dependencies": {
-    "@lukasbriza/eslint-config": "workspace:*",
-    "@lukasbriza/ts-config": "workspace:*",
     "@nestjs/common": "11.1.28",
     "@nestjs/config": "4.0.4",
     "@nestjs/core": "11.1.28",
@@ -36,6 +34,8 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@lukasbriza/eslint-config": "workspace:*",
+    "@lukasbriza/ts-config": "workspace:*",
     "@nestjs/cli": "11.0.23",
     "@nestjs/schematics": "11.1.0",
     "@nestjs/testing": "11.1.28",

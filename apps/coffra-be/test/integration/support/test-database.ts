@@ -56,3 +56,28 @@ export const testDatabase = (url: string | undefined): TestDatabase => {
  */
 export const connect = (connectionString: string): PrismaClient =>
   new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
+
+/**
+ * Runs one statement on the maintenance database.
+ *
+ * @param database - the test database, whose server is used
+ * @param statement - SQL without parameters; the database name in it was checked by `testDatabase`
+ * @throws Error naming the server when it cannot be reached
+ */
+export const maintain = async (database: TestDatabase, statement: string): Promise<void> => {
+  const client = connect(database.maintenanceUrl)
+
+  try {
+    await client.$executeRawUnsafe(statement)
+  } catch (error) {
+    // Prisma wraps the cause in lines about the invocation: its last line is the reason.
+    const message = error instanceof Error ? error.message : String(error)
+    const reason = message.trim().split('\n').at(-1) ?? message
+    throw new Error(
+      `The specs could not prepare their database on ${database.host}: ${reason.trim()}. ` +
+        'Is Postgres running? Start it with `pnpm infra:up`.',
+    )
+  } finally {
+    await client.$disconnect()
+  }
+}
