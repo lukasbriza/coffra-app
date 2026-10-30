@@ -33,15 +33,16 @@ export default defineConfig({
     env: TEST_ENV,
     // The e2e specs are the heaviest on the network (a whole login against the fake IdP per test), so they run as a
     // project of their own: after the rest (`groupOrder`), one file at a time. `pnpm test:unit` / `pnpm test:e2e`
-    // runs one of them. The integration specs need a Postgres, so they are not part of this run at all: they have a
-    // config and a script of their own (`pnpm test:integration`).
+    // runs one of them. The integration specs need a Postgres and the image specs a Postgres and Docker, so they are
+    // not part of this run at all: each has a config and a script of its own (`pnpm test:integration`,
+    // `pnpm test:image`).
     projects: [
       {
         extends: true,
         test: {
           name: 'unit',
           include: ['test/**/*.spec.ts'],
-          exclude: [...configDefaults.exclude, 'test/e2e/**', 'test/integration/**'],
+          exclude: [...configDefaults.exclude, 'test/e2e/**', 'test/integration/**', 'test/image/**'],
           sequence: { groupOrder: 0 },
         },
       },

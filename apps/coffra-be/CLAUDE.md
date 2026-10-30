@@ -157,7 +157,7 @@ Set by `transactions/accounts` (T14); categories, transactions and transfers fol
 - `openid-client` 6.x is ESM-only too and loads through `require(esm)`: that needs `"module": "node20"` in this app's `tsconfig.json` (otherwise TS1479) and Node >= 22.12. See ADR 0008.
 - `OIDC_ISSUER_URL` over plain `http:` works outside production only (dev Keycloak). A production start with it fails env validation, so `pnpm start` (`NODE_ENV=production`) needs an `https:` issuer.
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` and `AUTH_CHECKS_SECRET` must all differ (env validation enforces it), so one kind of signed value is never accepted as another. In production `OIDC_REDIRECT_URI` must be `https:` too (the login cookie is `Secure`).
-- Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`; `pnpm test:integration` needs Postgres (`pnpm infra:up`).
+- Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`; `pnpm test:integration` needs Postgres (`pnpm infra:up`); `pnpm test:image` needs Docker, the image (`pnpm image:build`) and Postgres.
 
 ## Dev environment (Postgres + Keycloak)
 
@@ -182,6 +182,22 @@ pnpm infra:logs
   `docker compose … cp keycloak:/tmp/r.json …`, then prettier-format and commit.
 - `iss` must equal `OIDC_ISSUER_URL` exactly (`KC_HOSTNAME` is pinned to `http://localhost:8080`). The app runs on the host, not in a container.
 - A real IdP (homelab Keycloak) only needs the `OIDC_*` env vars changed plus an equivalent client (confidential, PKCE S256, matching redirect URI).
+
+## Container image
+
+The image is built from `docker/node/prisma/Dockerfile` (ADR 0023), a Dockerfile for any NestJS app with Prisma 7 in the workspace; this app is `--build-arg APP=coffra-be`. The build context is the repository root. It is not for Prisma 6 and older (the query engine binary).
+
+```
+pnpm image:build     # docker build -f ../../docker/node/prisma/Dockerfile --build-arg APP=coffra-be -t coffra-be:local ../..
+pnpm test:image      # the image against the dev Postgres (needs Docker and `pnpm infra:up`)
+```
+
+- **No configuration or secret in the image.** The only baked variables are `NODE_ENV=production` and `PORT` (3000, build argument `PORT`), so the container needs the variables of `.env.example` at run time and, like any production start, an `https:` `OIDC_ISSUER_URL` and `OIDC_REDIRECT_URI` (discovery is lazy: any `https:` address starts it). No `TZ`: UTC, like the API.
+- **Migrations are a second command of the same image, never part of the start:** `node node_modules/prisma/build/index.js migrate deploy` in `/app/apps/coffra-be`. That is why `prisma` is in `dependencies`. The schema engine it needs is fetched by the install script of `@prisma/engines`, which the production-dependencies stage runs on its own (the install itself runs without scripts: the `postinstall` of the app generates the client and needs the schema).
+- **The runtime holds only** `build/`, `node_modules/`, `package.json`, `prisma/` and `prisma.config.ts`. A file the running app or the migrations need has to be copied into the runtime stage on purpose; `test/image/runtime-shape.spec.ts` pins that list.
+- **The `HEALTHCHECK` runs `node` against `GET /api/health`** (503 when the database is down). Docker and Portainer use it, k3s ignores it. The main process is `node build/main`, so Node is PID 1 and gets SIGTERM; without `enableShutdownHooks` in `configureApp` the container would be killed after the grace period.
+- **The production dependencies come from `pnpm deploy`** after the dependencies of the workspace root are dropped from the manifest (pnpm adds them to every install otherwise; 272 packages instead of 969). A new production dependency needs nothing in the Dockerfile.
+- **Image suite** (`test/image/`, config `test/image/vitest.config.mjs`, not part of `pnpm test`): the global setup creates `coffra_test_image` on the server of `TEST_DATABASE_URL`, runs the migrations with the image itself and removes every container labelled `coffra-image-test` at the start and the end. `IMAGE` names another image than `coffra-be:local`. A new required variable in `env.validation.ts` needs a value in `productionEnvironment` (`test/image/support/environment.ts`) as well. The linter rewrites `http://` to `https://` in a string (except `localhost`): a case about plain http uses `localhost`.
 
 ## Prisma 7 (optional)
 
