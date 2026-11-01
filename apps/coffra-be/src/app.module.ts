@@ -4,16 +4,17 @@ import { AppConfigModule } from './modules/config'
 import { CoreModule } from './modules/core'
 import { HealthModule } from './modules/health'
 import { PrismaModule } from './modules/prisma'
+import { RateLimitModule } from './modules/rate-limit'
 import { TransactionsModule } from './modules/transactions'
 
 /**
  * Root module of the API.
  *
- * Wires the infrastructure (configuration, database, health probe) and the domains: `core` (auth, users, ownership)
- * and `transactions` (accounts, categories, transactions, transfers, the dashboard). A domain is imported through its
- * `index.ts` only.
+ * Wires the infrastructure (configuration, database, rate limit, health probe) and the domains: `core` (auth, users,
+ * ownership) and `transactions` (accounts, categories, transactions, transfers, the dashboard). A domain is imported
+ * through its `index.ts` only.
  */
 @Module({
-  imports: [AppConfigModule, PrismaModule, HealthModule, CoreModule, TransactionsModule],
+  imports: [AppConfigModule, PrismaModule, RateLimitModule, HealthModule, CoreModule, TransactionsModule],
 })
 export class AppModule {}

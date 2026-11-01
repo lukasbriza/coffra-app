@@ -131,3 +131,110 @@ describe('validateEnv', () => {
     expect(message).not.toContain('short-leaky-secret')
   })
 })
+
+describe('validateEnv: HTTP hardening', () => {
+  it('has the safe defaults when nothing is set: no CORS, no proxy, a limit of 120 and 10 per minute', () => {
+    const env = validateEnv(validEnv())
+
+    expect(env.CORS_ORIGINS).toStrictEqual([])
+    expect(env.TRUST_PROXY_HOPS).toBe(0)
+    expect(env.RATE_LIMIT_TTL_SECONDS).toBe(60)
+    expect(env.RATE_LIMIT_MAX).toBe(120)
+    expect(env.RATE_LIMIT_AUTH_MAX).toBe(10)
+  })
+
+  it('converts the numeric strings of the environment', () => {
+    const env = validateEnv({
+      ...validEnv(),
+      TRUST_PROXY_HOPS: '2',
+      RATE_LIMIT_TTL_SECONDS: '30',
+      RATE_LIMIT_MAX: '500',
+      RATE_LIMIT_AUTH_MAX: '5',
+    })
+
+    expect(env.TRUST_PROXY_HOPS).toBe(2)
+    expect(env.RATE_LIMIT_TTL_SECONDS).toBe(30)
+    expect(env.RATE_LIMIT_MAX).toBe(500)
+    expect(env.RATE_LIMIT_AUTH_MAX).toBe(5)
+  })
+
+  describe('CORS_ORIGINS', () => {
+    it.each([
+      ['an empty value (a bare `CORS_ORIGINS=` in .env)', '', []],
+      ['only commas and spaces', ' , ,', []],
+      ['one https origin', 'https://app.example.com', ['https://app.example.com']],
+      ['one origin with a port', 'http://localhost:5173', ['http://localhost:5173']],
+      [
+        'two origins, spaces around the comma',
+        'https://app.example.com, http://localhost:5173 ',
+        ['https://app.example.com', 'http://localhost:5173'],
+      ],
+      [
+        'an empty entry between two',
+        'https://a.example.com,,https://b.example.com',
+        ['https://a.example.com', 'https://b.example.com'],
+      ],
+    ])('accepts %s', (_name, value, expected) => {
+      expect(validateEnv({ ...validEnv(), CORS_ORIGINS: value }).CORS_ORIGINS).toStrictEqual(expected)
+    })
+
+    it.each([
+      ['a wildcard', '*'],
+      ['the opaque origin', 'null'],
+      ['a host without a scheme', 'app.example.com'],
+      ['a trailing slash', 'https://app.example.com/'],
+      ['a path', 'https://app.example.com/app'],
+      ['a host in upper case', 'https://APP.example.com'],
+      ['the default port of https', 'https://app.example.com:443'],
+      ['the default port of http', 'http://localhost:80'],
+      ['another scheme', 'ftp://app.example.com'],
+      ['a query', 'https://app.example.com?x=1'],
+      ['one bad entry among good ones', 'https://app.example.com,*'],
+    ])('refuses %s', (_name, value) => {
+      expect(() => validateEnv({ ...validEnv(), CORS_ORIGINS: value })).toThrow(
+        /CORS_ORIGINS: entry \d+ must be an origin/,
+      )
+    })
+
+    it('says which entry is wrong, and never what it said', () => {
+      const message = errorMessage({
+        ...validEnv(),
+        CORS_ORIGINS: 'https://app.example.com,https://secret-host.example.com/',
+      })
+
+      expect(message).toContain('CORS_ORIGINS: entry 2')
+      expect(message).not.toContain('secret-host')
+    })
+  })
+
+  describe('TRUST_PROXY_HOPS', () => {
+    it.each(['0', '1', '10'])('accepts %s', (value) => {
+      expect(validateEnv({ ...validEnv(), TRUST_PROXY_HOPS: value }).TRUST_PROXY_HOPS).toBe(Number(value))
+    })
+
+    it.each([
+      ['below zero', '-1'],
+      ['above ten', '11'],
+      ['a fraction', '1.5'],
+      ['text', 'abc'],
+      ['`true`, which would trust any X-Forwarded-For', 'true'],
+    ])('refuses %s', (_name, value) => {
+      expect(errorMessage({ ...validEnv(), TRUST_PROXY_HOPS: value })).toContain('TRUST_PROXY_HOPS')
+    })
+  })
+
+  describe.each(['RATE_LIMIT_TTL_SECONDS', 'RATE_LIMIT_MAX', 'RATE_LIMIT_AUTH_MAX'])('%s', (name) => {
+    it('accepts a whole number from 1', () => {
+      expect(() => validateEnv({ ...validEnv(), [name]: '1' })).not.toThrow()
+    })
+
+    it.each([
+      ['zero', '0'],
+      ['below zero', '-5'],
+      ['a fraction', '1.5'],
+      ['text', 'many'],
+    ])('refuses %s', (_case, value) => {
+      expect(errorMessage({ ...validEnv(), [name]: value })).toContain(name)
+    })
+  })
+})

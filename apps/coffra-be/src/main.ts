@@ -11,20 +11,24 @@ import { SWAGGER_PATH, setupSwagger } from './swagger.setup'
 /**
  * Starts the HTTP server.
  *
- * Creates the application, configures it, makes the authentication guard global, mounts Swagger and listens on the
- * port from the configuration.
+ * Creates the application, configures it (security headers, CORS and the proxy count from the environment), makes the
+ * authentication guard global, mounts Swagger and listens on the port from the configuration.
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
+  const config = app.get<ConfigService<Env, true>>(ConfigService)
 
-  configureApp(app)
+  configureApp(app, {
+    corsOrigins: config.get('CORS_ORIGINS', { infer: true }),
+    trustProxyHops: config.get('TRUST_PROXY_HOPS', { infer: true }),
+  })
   // Every route needs an access token unless it is `@Public()`. Not part of `configureApp` on purpose: an app booted
   // without this line has no authentication, so the line stays here, in plain sight.
   const jwtAuthGuard = new JwtAuthGuard(app.get(Reflector), app.get(AuthTokensService))
   app.useGlobalGuards(jwtAuthGuard)
   setupSwagger(app)
 
-  const port = app.get<ConfigService<Env, true>>(ConfigService).get('PORT', { infer: true })
+  const port = config.get('PORT', { infer: true })
   await app.listen(port)
 
   const bootstrapLogger = new Logger('Bootstrap')

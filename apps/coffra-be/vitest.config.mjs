@@ -20,6 +20,11 @@ export const TEST_ENV = {
   AUTH_CHECKS_SECRET: 'test-checks-secret-with-at-least-32-chars',
   JWT_ACCESS_TTL_SECONDS: '900',
   JWT_REFRESH_TTL_SECONDS: '2592000',
+  CORS_ORIGINS: '',
+  TRUST_PROXY_HOPS: '0',
+  RATE_LIMIT_TTL_SECONDS: '60',
+  RATE_LIMIT_MAX: '120',
+  RATE_LIMIT_AUTH_MAX: '10',
 }
 
 export default defineConfig({

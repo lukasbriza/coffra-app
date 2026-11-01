@@ -3,6 +3,7 @@ import { ApiOkResponse, ApiServiceUnavailableResponse, ApiTags } from '@nestjs/s
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus'
 
 import { Public } from '../core'
+import { SkipRateLimit } from '../rate-limit'
 
 import { PrismaHealthIndicator } from './prisma.health'
 
@@ -20,9 +21,12 @@ const healthResultSchema = {
 /**
  * Probe for the container orchestrator: `GET /api/health`.
  *
- * Public, so it needs no token. The whole controller is public on purpose; a check added here is public too.
+ * Public, so it needs no token. The whole controller is public on purpose; a check added here is public too. It is also
+ * outside the rate limit: the orchestrator calls it on a timer from one address, and a `429` would make a healthy
+ * application look dead.
  */
 @Public()
+@SkipRateLimit()
 @Controller('health')
 // Swagger
 @ApiTags('health')

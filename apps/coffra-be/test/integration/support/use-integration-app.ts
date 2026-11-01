@@ -13,6 +13,7 @@ import { AppModule } from '../../../src/app.module'
 import { configureApp } from '../../../src/app.setup'
 import { AuthTokensService, JwtAuthGuard } from '../../../src/modules/core'
 import { PrismaService } from '../../../src/modules/prisma'
+import { withoutRateLimit } from '../../modules/rate-limit/without-rate-limit'
 
 import { type Snapshot, takeSnapshot } from './snapshot'
 import { testDatabase } from './test-database'
@@ -117,7 +118,8 @@ export const useIntegrationApp = ({ imports = [] }: Options = {}) => {
     // eslint-disable-next-line turbo/no-undeclared-env-vars
     testDatabase(process.env.DATABASE_URL)
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule, ...imports] }).compile()
+    // Without the rate limit: hundreds of requests from one address would meet it. The limit has specs of its own.
+    const moduleRef = await withoutRateLimit(Test.createTestingModule({ imports: [AppModule, ...imports] })).compile()
 
     app = moduleRef.createNestApplication({ logger: false })
     configureApp(app)

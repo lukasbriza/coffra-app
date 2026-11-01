@@ -60,3 +60,4 @@ and mark the old one `Superseded by NNNN`.
 | [0022](./0022-dashboard-trend.md)                    | Dashboard trend: totals by day, folded into months                | Accepted |
 | [0023](./0023-container-image.md)                    | Container image: shared Dockerfile, migrations as a command       | Accepted |
 | [0024](./0024-seed-and-scripts.md)                   | Developer scripts with tsx, demo seed replaces one user's data    | Accepted |
+| [0025](./0025-http-hardening.md)                     | HTTP hardening: strict CSP, CORS allow-list, rate limit buckets   | Accepted |

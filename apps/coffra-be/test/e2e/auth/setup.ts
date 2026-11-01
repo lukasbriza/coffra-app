@@ -10,6 +10,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, type MockInstance, 
 import { configureApp } from '../../../src/app.setup'
 import type { TokenPair } from '../../../src/modules/core/auth/types'
 import { useQuietWarnings } from '../../modules/core/auth/use-quiet-warnings'
+import { withoutRateLimit } from '../../modules/rate-limit/without-rate-limit'
 import { CLIENT_ID, CLIENT_SECRET, FakeIdp, REDIRECT_URI } from '../support/fake-idp'
 import { InMemoryPrisma } from '../support/in-memory-prisma'
 
@@ -98,10 +99,20 @@ const travel = (seconds: number): void => {
 }
 
 /**
+ * What a spec may change about the app it boots.
+ *
+ * @property env - variables set on top of the defaults of this file (`RATE_LIMIT_AUTH_MAX`, ...)
+ * @property rateLimited - keep the real rate limit; by default it is replaced by a guard that lets everything through
+ */
+type AuthAppOptions = { env?: Record<string, string>; rateLimited?: boolean }
+
+/**
  * Boots the app against the fake IdP. Call it inside a `describe`: it registers the hooks for that block (IdP and
  * environment once, a fresh app and user table for every test) and returns the helpers of the specs.
+ *
+ * @param options - the environment and whether the rate limit is real; the defaults are the ones of the other specs
  */
-export const useAuthApp = () => {
+export const useAuthApp = ({ env = {}, rateLimited = false }: AuthAppOptions = {}) => {
   const { warn } = useQuietWarnings()
   let error: MockInstance<Logger['error']>
   let idp: FakeIdp
@@ -154,7 +165,7 @@ export const useAuthApp = () => {
 
   beforeAll(async () => {
     idp = await FakeIdp.start()
-    for (const [name, value] of Object.entries({ ...ENV, OIDC_ISSUER_URL: idp.issuer })) {
+    for (const [name, value] of Object.entries({ ...ENV, ...env, OIDC_ISSUER_URL: idp.issuer })) {
       vi.stubEnv(name, value)
     }
     loaded = await loadApp()
@@ -172,10 +183,10 @@ export const useAuthApp = () => {
     idp.reset()
     prisma = new InMemoryPrisma()
 
-    const moduleRef = await Test.createTestingModule({ imports: [loaded.AppModule] })
+    const builder = Test.createTestingModule({ imports: [loaded.AppModule] })
       .overrideProvider(loaded.PrismaService)
       .useValue(prisma)
-      .compile()
+    const moduleRef = await (rateLimited ? builder : withoutRateLimit(builder)).compile()
 
     app = moduleRef.createNestApplication()
     configureApp(app)
