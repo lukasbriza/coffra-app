@@ -7,6 +7,7 @@
     "prebuild": "rimraf build tsconfig.build.tsbuildinfo",
     "build": "nest build",
     "cleanup": "rimraf .eslintcache .turbo tsconfig.tsbuildinfo tsconfig.build.tsbuildinfo build node_modules --glob",
+    "db:seed": "tsx scripts/seed/main.ts",
     "predev": "rimraf build tsconfig.tsbuildinfo tsconfig.build.tsbuildinfo",
     "dev": "dotenv -v NODE_ENV=development -- nest start --watch",
     "fix": "run-p ts format:fix lint:fix",
@@ -72,6 +73,7 @@
     "ts-loader": "9.5.1",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
+    "tsx": "4.23.0",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
   }

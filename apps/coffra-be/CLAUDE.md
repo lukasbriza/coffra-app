@@ -157,7 +157,7 @@ Set by `transactions/accounts` (T14); categories, transactions and transfers fol
 - `openid-client` 6.x is ESM-only too and loads through `require(esm)`: that needs `"module": "node20"` in this app's `tsconfig.json` (otherwise TS1479) and Node >= 22.12. See ADR 0008.
 - `OIDC_ISSUER_URL` over plain `http:` works outside production only (dev Keycloak). A production start with it fails env validation, so `pnpm start` (`NODE_ENV=production`) needs an `https:` issuer.
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` and `AUTH_CHECKS_SECRET` must all differ (env validation enforces it), so one kind of signed value is never accepted as another. In production `OIDC_REDIRECT_URI` must be `https:` too (the login cookie is `Secure`).
-- Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`; `pnpm test:integration` needs Postgres (`pnpm infra:up`); `pnpm test:image` needs Docker, the image (`pnpm image:build`) and Postgres.
+- Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`; `pnpm db:seed` fills the dev database with demo data (see Demo data); `pnpm test:integration` needs Postgres (`pnpm infra:up`); `pnpm test:image` needs Docker, the image (`pnpm image:build`) and Postgres.
 
 ## Dev environment (Postgres + Keycloak)
 
@@ -198,6 +198,18 @@ pnpm test:image      # the image against the dev Postgres (needs Docker and `pnp
 - **The `HEALTHCHECK` runs `node` against `GET /api/health`** (503 when the database is down). Docker and Portainer use it, k3s ignores it. The main process is `node build/main`, so Node is PID 1 and gets SIGTERM; without `enableShutdownHooks` in `configureApp` the container would be killed after the grace period.
 - **The production dependencies come from `pnpm deploy`** after the dependencies of the workspace root are dropped from the manifest (pnpm adds them to every install otherwise; 272 packages instead of 969). A new production dependency needs nothing in the Dockerfile.
 - **Image suite** (`test/image/`, config `test/image/vitest.config.mjs`, not part of `pnpm test`): the global setup creates `coffra_test_image` on the server of `TEST_DATABASE_URL`, runs the migrations with the image itself and removes every container labelled `coffra-image-test` at the start and the end. `IMAGE` names another image than `coffra-be:local`. A new required variable in `env.validation.ts` needs a value in `productionEnvironment` (`test/image/support/environment.ts`) as well. The linter rewrites `http://` to `https://` in a string (except `localhost`): a case about plain http uses `localhost`.
+
+## Demo data (seed)
+
+`pnpm db:seed` (needs `pnpm infra:up`) writes demo data for the user of the dev realm, so the first login (`dev@coffra.local` / `dev`) shows something (ADR 0024). It reads `DATABASE_URL` from `.env`.
+
+- **It replaces, it does not add:** it finds or creates the `User` with the fixed `sub` of `docker/keycloak/coffra-realm.json`, deletes **everything that user owns**, also what was entered by hand, and writes the data again, all in one database transaction. A failure leaves what was there. The `User` row (and so its id and the tokens issued for it) stays; other users are never touched. Say so before telling someone to run it on a database that holds data they want.
+- **Production is refused:** `NODE_ENV=production` ends the command before it reads `DATABASE_URL`. The script does not set `NODE_ENV` (unlike `dev`), so the variable of the shell wins over `.env`; an unset one counts as development.
+- **The data** (`demo-data.ts`, a table): four accounts (three CZK, one EUR), nine categories, the last 12 calendar months including the current one, repeating monthly entries and two transfers, a few months with more spending, a transaction without a category every month, and **one planned payment** three days after today (the dashboard counts it, the balance does not). In the current month only the days up to today are written. The same day always gives the same rows (no randomness, no time zone).
+- **Layout** (`scripts/seed/`, not in `src/`): `main.ts` is the command line (environment, clock, connection, one printed sentence), `seed-demo.ts` is `seedDemo(client, today)`, `build-ledger.ts` is the pure `buildLedger(today)`, `assert-seed-allowed.ts` is the production guard, `constants.ts` holds `DEMO_USER`, `utils/` one function per file. A transfer is one item in the ledger that `seedDemo` writes as both of its sides in the same statement: any other way to write transfers must write both sides atomically too (ADR 0017).
+- **Runner:** `tsx` (a `devDependency`), because `ts-node` cannot load the generated client (`./enums.js` is a `.ts` file). `scripts/` is type-checked and linted but not built and not in the image; a command that has to run from the image goes in `src/` (see Container image).
+- The seed is a development tool, not a domain: it writes `userId` itself instead of going through `OwnershipService`. That is allowed only here and in the test support (`seedWorld`).
+- **Specs:** `test/scripts/seed/` (unit, no database: the ledger with amounts worked out by hand, in six time zones; the guard; `DEMO_USER` against the realm file) and `test/integration/seed/` (balances and dashboard through the API against numbers worked out by hand and against the independent SQL, a second run, other users untouched, a failure half way, the command line itself). A change of `demo-data.ts` changes those numbers: work them out again from the table, do not copy them from the output.
 
 ## Prisma 7 (optional)
 

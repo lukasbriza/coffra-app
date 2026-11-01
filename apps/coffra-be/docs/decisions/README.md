@@ -59,3 +59,4 @@ and mark the old one `Superseded by NNNN`.
 | [0021](./0021-dashboard.md)                          | Dashboard: feature of transactions, windows per currency          | Accepted |
 | [0022](./0022-dashboard-trend.md)                    | Dashboard trend: totals by day, folded into months                | Accepted |
 | [0023](./0023-container-image.md)                    | Container image: shared Dockerfile, migrations as a command       | Accepted |
+| [0024](./0024-seed-and-scripts.md)                   | Developer scripts with tsx, demo seed replaces one user's data    | Accepted |
