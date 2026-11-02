@@ -1,4 +1,4 @@
-# coffra-be local dev infrastructure: Postgres + Keycloak.
+# coffra-be local dev infrastructure: Postgres + Keycloak + Redis.
 # DEV ONLY — every password/secret here is public. Never reuse them anywhere real.
 #
 # Driven by the `infra:*` scripts in apps/coffra-be/package.json.
@@ -7,6 +7,9 @@
 #   - Keycloak keeps no state (embedded H2, no volume). The realm in
 #     keycloak/coffra-realm.json is the single source of truth and is re-imported on
 #     every container (re)creation.
+#   - Redis holds the rate limit counters only (REDIS_URL), shared by the replicas of the app; nothing in it is worth
+#     keeping, so it writes nothing to disk. `pnpm dev` does not need it (without REDIS_URL the counters are in the
+#     memory of the process); the integration specs of the rate limit do.
 name: coffra-dev
 
 services:
@@ -22,6 +25,17 @@ services:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U coffra -d coffra_dev']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8.2-alpine3.22
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    ports:
+      - '127.0.0.1:6389:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 10

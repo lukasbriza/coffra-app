@@ -13,7 +13,7 @@ import { AppModule } from '../../../src/app.module'
 import { configureApp } from '../../../src/app.setup'
 import { AuthTokensService, JwtAuthGuard } from '../../../src/modules/core'
 import { PrismaService } from '../../../src/modules/prisma'
-import { withoutRateLimit } from '../../modules/rate-limit/without-rate-limit'
+import { withoutRateLimit } from '../../modules/rate-limit/rate-limit-overrides'
 
 import { type Snapshot, takeSnapshot } from './snapshot'
 import { testDatabase } from './test-database'

@@ -10,7 +10,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, type MockInstance, 
 import { configureApp } from '../../../src/app.setup'
 import type { TokenPair } from '../../../src/modules/core/auth/types'
 import { useQuietWarnings } from '../../modules/core/auth/use-quiet-warnings'
-import { withoutRateLimit } from '../../modules/rate-limit/without-rate-limit'
+import { withMemoryRateLimit, withoutRateLimit } from '../../modules/rate-limit/rate-limit-overrides'
+import { fakeRedis } from '../../modules/redis/fake-redis'
 import { CLIENT_ID, CLIENT_SECRET, FakeIdp, REDIRECT_URI } from '../support/fake-idp'
 import { InMemoryPrisma } from '../support/in-memory-prisma'
 
@@ -50,8 +51,9 @@ const loadApp = async () => {
   const { AppModule } = await import('../../../src/app.module.js')
   const { AuthTokensService, JwtAuthGuard } = await import('../../../src/modules/core/index.js')
   const { PrismaService } = await import('../../../src/modules/prisma/index.js')
+  const { RedisService } = await import('../../../src/modules/redis/index.js')
 
-  return { AppModule, AuthTokensService, JwtAuthGuard, PrismaService }
+  return { AppModule, AuthTokensService, JwtAuthGuard, PrismaService, RedisService }
 }
 
 /** The `name=value` part of the login cookie in a `Set-Cookie` header, what a browser sends back. */
@@ -102,7 +104,8 @@ const travel = (seconds: number): void => {
  * What a spec may change about the app it boots.
  *
  * @property env - variables set on top of the defaults of this file (`RATE_LIMIT_AUTH_MAX`, ...)
- * @property rateLimited - keep the real rate limit; by default it is replaced by a guard that lets everything through
+ * @property rateLimited - keep the real rate limit, counting in memory (the specs move `Date`, Redis has its own clock);
+ * by default it is replaced by a guard that lets everything through
  */
 type AuthAppOptions = { env?: Record<string, string>; rateLimited?: boolean }
 
@@ -186,7 +189,10 @@ export const useAuthApp = ({ env = {}, rateLimited = false }: AuthAppOptions = {
     const builder = Test.createTestingModule({ imports: [loaded.AppModule] })
       .overrideProvider(loaded.PrismaService)
       .useValue(prisma)
-    const moduleRef = await (rateLimited ? builder : withoutRateLimit(builder)).compile()
+      // No Docker here: Redis answers the health probe, and the rate limit is replaced or counts in memory.
+      .overrideProvider(loaded.RedisService)
+      .useValue(fakeRedis())
+    const moduleRef = await (rateLimited ? withMemoryRateLimit(builder) : withoutRateLimit(builder)).compile()
 
     app = moduleRef.createNestApplication()
     configureApp(app)

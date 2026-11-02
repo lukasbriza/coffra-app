@@ -9,7 +9,7 @@ const LIMITS = { ttlSeconds: 60, max: 3, authMax: 2 }
 
 describe('which client the limit counts', () => {
   describe('without a trusted proxy', () => {
-    const app = useRateLimitApp(LIMITS, 0)
+    const app = useRateLimitApp(LIMITS)
 
     it('ignores X-Forwarded-For, so a client cannot leave its bucket by writing another address', async () => {
       await app.get('/plain', { 'X-Forwarded-For': '203.0.113.1' }).expect(200)
@@ -21,7 +21,7 @@ describe('which client the limit counts', () => {
   })
 
   describe('behind one trusted proxy', () => {
-    const app = useRateLimitApp(LIMITS, 1)
+    const app = useRateLimitApp(LIMITS, { trustProxyHops: 1 })
 
     it('gives every client address its own bucket', async () => {
       await app.get('/plain', { 'X-Forwarded-For': '203.0.113.1' }).expect(200)

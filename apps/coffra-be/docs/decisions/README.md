@@ -61,3 +61,5 @@ and mark the old one `Superseded by NNNN`.
 | [0023](./0023-container-image.md)                    | Container image: shared Dockerfile, migrations as a command       | Accepted |
 | [0024](./0024-seed-and-scripts.md)                   | Developer scripts with tsx, demo seed replaces one user's data    | Accepted |
 | [0025](./0025-http-hardening.md)                     | HTTP hardening: strict CSP, CORS allow-list, rate limit buckets   | Accepted |
+| [0026](./0026-rate-limit-in-redis.md)                | Rate limit counters in Redis, 503 while Redis is away             | Accepted |
+| [0027](./0027-swagger-off-in-production.md)          | Swagger UI off in production by default                           | Accepted |

@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-01
+- **Note:** where the counters are kept is decided again in ADR 0026 (always Redis; requests refused with 503 while it is away).
 
 ## Context
 
@@ -92,8 +93,8 @@ specs of its own that use the real guard with small numbers: the module over pro
 
 ## Consequences
 
-- One replica. The counters are lost on restart, and two replicas would each allow the whole limit; scaling out needs
-  a shared store and a new decision.
+- Kept in memory, the counters are lost on restart and two replicas each allow the whole limit; ADR 0026 moves them to
+  Redis.
 - **`TRUST_PROXY_HOPS` must match the real number of proxies, in both directions.** 0 behind a proxy makes every client
   look like the proxy, so they share one bucket (anyone can use up the login limit for everybody, the owner included).
   A number above the real count lets a client choose its address with `X-Forwarded-For` and escape the limit. One

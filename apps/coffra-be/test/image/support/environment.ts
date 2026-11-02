@@ -1,3 +1,4 @@
+import { testRedisUrl } from '../../integration/support/redis'
 import { type TestDatabase, testDatabase } from '../../integration/support/test-database'
 
 // What every spec of the image suite shares: which image, which database, and a complete production configuration.
@@ -29,22 +30,40 @@ export const SECRETS = {
 // eslint-disable-next-line turbo/no-undeclared-env-vars
 export const imageDatabase = (): TestDatabase => testDatabase(process.env.DATABASE_URL)
 
+/** Host names of the loopback: inside a container they mean the container itself, not the machine that runs Docker. */
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
+
 /**
- * The connection string a container uses: the same server, reached through the host when it listens on the loopback of
- * the machine that runs Docker.
+ * Rewrites a connection string for use inside a container: a server on the loopback of the machine that runs Docker is
+ * reached through `HOST_ALIAS`; any other host stays.
  *
- * @param database - the database of the suite
+ * @param connectionString - the connection string as the host machine uses it
  * @returns the connection string for inside a container
  */
-export const containerDatabaseUrl = (database: TestDatabase): string => {
-  const url = new URL(database.url)
+const fromContainer = (connectionString: string): string => {
+  const url = new URL(connectionString)
 
-  if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) {
+  if (LOOPBACK_HOSTS.has(url.hostname)) {
     url.hostname = HOST_ALIAS
   }
 
   return url.toString()
 }
+
+/**
+ * The connection string of the database of the suite as a container reaches it.
+ *
+ * @param database - the database of the suite
+ * @returns the `DATABASE_URL` for inside a container
+ */
+export const containerDatabaseUrl = (database: TestDatabase): string => fromContainer(database.url)
+
+/**
+ * The connection string of the Redis of the suite as a container reaches it.
+ *
+ * @returns the `REDIS_URL` for inside a container
+ */
+export const containerRedisUrl = (): string => fromContainer(testRedisUrl())
 
 /**
  * A complete, valid production configuration. The OIDC provider is never contacted (discovery is lazy), so any
@@ -58,5 +77,6 @@ export const productionEnvironment = (databaseUrl: string): Record<string, strin
   OIDC_ISSUER_URL: 'https://idp.example.test/realms/coffra',
   OIDC_CLIENT_ID: 'coffra-be',
   OIDC_REDIRECT_URI: 'https://app.example.test/api/auth/callback',
+  REDIS_URL: containerRedisUrl(),
   ...SECRETS,
 })

@@ -46,7 +46,10 @@ const CORS_MAX_AGE_SECONDS = 600
  * @param app - the application to configure
  * @param options - the settings that come from the environment; none by default
  */
-export function configureApp(app: INestApplication, { corsOrigins = [], trustProxyHops = 0 }: AppOptions = {}): void {
+export const configureApp = (
+  app: INestApplication,
+  { corsOrigins = [], trustProxyHops = 0 }: AppOptions = {},
+): void => {
   if (trustProxyHops > 0) {
     // The platform is Express: with this setting `req.ip` is the address the nearest trusted proxy saw, not what the
     // client wrote in `X-Forwarded-For`.
@@ -72,6 +75,6 @@ export function configureApp(app: INestApplication, { corsOrigins = [], trustPro
   // Unsigned: the cookies the app sets carry their own signature (e.g. the login checks JWT).
   app.use(cookieParser())
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }))
-  // Lets PrismaService.onModuleDestroy run on SIGTERM (Docker/k3s stop).
+  // Lets the shutdown hooks run on SIGTERM (Docker/k3s stop): PrismaService and RedisService close their connections.
   app.enableShutdownHooks()
 }

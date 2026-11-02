@@ -15,7 +15,7 @@ const SWAGGER_POLICY =
 const PAGE = 'http://localhost/api/swagger'
 
 describe('the security headers of the Swagger UI', () => {
-  const app = useHttpApp({}, { swagger: true })
+  const app = useHttpApp({ swagger: true })
 
   it('has the policy of a page that loads its own scripts, on the page', async () => {
     const response = await app.get('/api/swagger').expect(200)

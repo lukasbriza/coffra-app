@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url'
 
 import { configDefaults, defineConfig } from 'vitest/config'
 
+import { redisUrl } from '../integration/redis-url.mjs'
+
 import { imageDatabaseUrl } from './database-url.mjs'
 
 // The image suite (`pnpm test:image`): the production image of the app, run with Docker against a real Postgres. Not
@@ -15,7 +17,8 @@ export default defineConfig({
     include: ['test/image/**/*.spec.ts'],
     exclude: configDefaults.exclude,
     globalSetup: ['test/image/support/global-setup.ts'],
-    env: { DATABASE_URL: imageDatabaseUrl() },
+    // `TEST_REDIS_URL` is for the one spec that runs the image with `REDIS_URL` (`redis.spec.ts`).
+    env: { DATABASE_URL: imageDatabaseUrl(), TEST_REDIS_URL: redisUrl() },
     // One database and a handful of containers: the files run one after another. One worker also keeps the loopback
     // quiet (see the `maxWorkers` note in `vitest.config.mjs`).
     maxWorkers: 1,

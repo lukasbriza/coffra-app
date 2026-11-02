@@ -1,78 +1,67 @@
 import 'reflect-metadata'
 
-import {
-  type CanActivate,
-  Controller,
-  Get,
-  type INestApplication,
-  Req,
-  UnauthorizedException,
-  UseGuards,
-} from '@nestjs/common'
+import type { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
-import type { Request } from 'express'
 import request from 'supertest'
 import type { App } from 'supertest/types'
-import { afterEach, beforeEach } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 
 import { configureApp } from '../../src/app.setup'
 import type { AppOptions } from '../../src/app.types'
+import { HealthModule } from '../../src/modules/health'
+import { PrismaService } from '../../src/modules/prisma/prisma.service'
+import { RedisService } from '../../src/modules/redis'
 import { setupSwagger } from '../../src/swagger.setup'
 
-// Shared by the specs of `configureApp` and `setupSwagger`: an application with one open and one closed probe route,
-// configured exactly as `main.ts` does, and nothing else of the app.
+import { EchoController } from './echo-route'
+import { PrivateController, ProbeController } from './probe-routes'
 
-/** Turns every request away like `JwtAuthGuard` does without a token. */
-class DenyGuard implements CanActivate {
-  canActivate(): boolean {
-    throw new UnauthorizedException()
-  }
+// Shared by the specs of `configureApp` and `setupSwagger` (one spec per use case in this folder): the probe routes,
+// the echo route and the real health probe, configured exactly as `main.ts` does, and nothing else of the app. The
+// database and Redis of the health probe are mocks the specs control.
+
+/** The outside world of the health probe; reset before every test to "up". */
+export const infrastructure = {
+  queryRaw: vi.fn(),
+  ping: vi.fn(),
 }
-
-/** An open route: the answer of a healthy request. */
-@Controller('probe')
-class ProbeController {
-  @Get()
-  index(): { ok: true } {
-    return { ok: true }
-  }
-
-  @Get('who')
-  who(@Req() req: Request): { ip: string | undefined } {
-    return { ip: req.ip }
-  }
-}
-
-/** A route the guard turns away: the answer of a request without a token. */
-@Controller('private')
-@UseGuards(DenyGuard)
-class PrivateController {
-  @Get()
-  index(): { ok: true } {
-    return { ok: true }
-  }
-}
-
-/** What a spec may add to the app it boots. */
-type HttpAppOptions = { swagger?: boolean }
 
 /**
- * Boots the probe routes with `configureApp(app, options)`. Call it inside a `describe`: it registers the
- * `beforeEach` and `afterEach` of that block and returns the requests of the specs.
+ * What a spec boots.
  *
- * @param options - what `main.ts` would take from the environment
- * @param extras - `swagger: true` also mounts the Swagger UI (`setupSwagger`), as `main.ts` does
+ * @property swagger - also mount the Swagger UI (`setupSwagger`), as `main.ts` does when `SWAGGER_ENABLED`
  */
-export const useHttpApp = (options: AppOptions = {}, { swagger = false }: HttpAppOptions = {}) => {
+type HttpAppOptions = AppOptions & { swagger?: boolean }
+
+/**
+ * Boots the routes with `configureApp`. Call it inside a `describe`: it registers the `beforeEach` and `afterEach` of
+ * that block and returns the requests of the specs.
+ *
+ * @param options - what `main.ts` would take from the environment (`corsOrigins`, `trustProxyHops`), and `swagger`
+ */
+export const useHttpApp = ({ swagger = false, ...appOptions }: HttpAppOptions = {}) => {
   let app: INestApplication
 
   const server = (): App => app.getHttpServer() as App
 
   beforeEach(async () => {
-    const moduleRef = await Test.createTestingModule({ controllers: [ProbeController, PrivateController] }).compile()
+    infrastructure.queryRaw.mockReset().mockResolvedValue([])
+    infrastructure.ping.mockReset().mockResolvedValue('PONG')
+
+    // The health probe needs `PrismaService` and `RedisService`; no module of this app provides them.
+    const mocks = new Map<unknown, unknown>([
+      [PrismaService, { $queryRaw: infrastructure.queryRaw }],
+      [RedisService, { ping: infrastructure.ping }],
+    ])
+    const moduleRef = await Test.createTestingModule({
+      imports: [HealthModule],
+      controllers: [ProbeController, PrivateController, EchoController],
+    })
+      .useMocker((token) => mocks.get(token))
+      .compile()
 
     app = moduleRef.createNestApplication()
-    configureApp(app, options)
+    configureApp(app, appOptions)
     if (swagger) {
       setupSwagger(app)
     }
@@ -81,10 +70,14 @@ export const useHttpApp = (options: AppOptions = {}, { swagger = false }: HttpAp
 
   afterEach(async () => {
     await app.close()
+    vi.restoreAllMocks()
   })
 
   return {
+    /** The app, for `buildSwaggerDocument`. */
+    app: (): INestApplication => app,
     get: (path: string, headers: Record<string, string> = {}): request.Test => request(server()).get(path).set(headers),
+    post: (path: string, body: object): request.Test => request(server()).post(path).send(body),
     options: (path: string, headers: Record<string, string> = {}): request.Test =>
       request(server()).options(path).set(headers),
   }

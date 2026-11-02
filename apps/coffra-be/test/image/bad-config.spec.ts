@@ -25,6 +25,16 @@ describe('starting the image with a configuration that is wrong', () => {
       reason: 'OIDC_ISSUER_URL: must use https in production',
     },
     {
+      name: 'a missing Redis url',
+      env: Object.fromEntries(Object.entries(environment).filter(([name]) => name !== 'REDIS_URL')),
+      reason: 'REDIS_URL must be a redis:// or rediss:// connection string',
+    },
+    {
+      name: 'a Redis url that is not Redis',
+      env: { ...environment, REDIS_URL: 'mysql://root@db.example.test/coffra' },
+      reason: 'REDIS_URL must be a redis:// or rediss:// connection string',
+    },
+    {
       name: 'a database url that is not Postgres',
       env: { ...environment, DATABASE_URL: 'mysql://root@db.example.test/coffra' },
       reason: 'DATABASE_URL must be a postgres:// or postgresql:// connection string',

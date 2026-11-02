@@ -42,6 +42,14 @@ describe('the server in the image', () => {
     expect(response.headers.get('x-powered-by')).toBeNull()
   })
 
+  it('serves no Swagger in production unless asked to', async () => {
+    const page = await app.get('/api/swagger')
+    const document = await app.get('/api/swagger-json')
+
+    expect(page.status).toBe(404)
+    expect(document.status).toBe(404)
+  })
+
   it('limits the requests with the default of 120 per window, and leaves the health probe out', async () => {
     const limited = await app.get('/api/users/me')
     const probe = await app.get('/api/health')

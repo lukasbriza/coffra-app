@@ -26,8 +26,8 @@ describe('the global limit', () => {
     const response = await app.get('/plain').expect(429)
 
     expect(response.body).toStrictEqual({ statusCode: 429, message: 'ThrottlerException: Too Many Requests' })
-    expect(Number(response.headers['retry-after'])).toBeGreaterThan(0)
-    expect(Number(response.headers['retry-after'])).toBeLessThanOrEqual(60)
+    // The clock stands still, so the wait is exactly the window: the block of the library, not a pause of Redis.
+    expect(response.headers['retry-after']).toBe('60')
   })
 
   it('counts every plain route in the same bucket', async () => {

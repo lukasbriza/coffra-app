@@ -12,9 +12,10 @@ import { SWAGGER_PATH, setupSwagger } from './swagger.setup'
  * Starts the HTTP server.
  *
  * Creates the application, configures it (security headers, CORS and the proxy count from the environment), makes the
- * authentication guard global, mounts Swagger and listens on the port from the configuration.
+ * authentication guard global, mounts Swagger when `SWAGGER_ENABLED` (by default not in production) and listens on the
+ * port from the configuration.
  */
-async function bootstrap() {
+const bootstrap = async () => {
   const app = await NestFactory.create(AppModule)
   const config = app.get<ConfigService<Env, true>>(ConfigService)
 
@@ -26,14 +27,19 @@ async function bootstrap() {
   // without this line has no authentication, so the line stays here, in plain sight.
   const jwtAuthGuard = new JwtAuthGuard(app.get(Reflector), app.get(AuthTokensService))
   app.useGlobalGuards(jwtAuthGuard)
-  setupSwagger(app)
+  const swaggerEnabled = config.get('SWAGGER_ENABLED', { infer: true }) === true
+  if (swaggerEnabled) {
+    setupSwagger(app)
+  }
 
   const port = config.get('PORT', { infer: true })
   await app.listen(port)
 
   const bootstrapLogger = new Logger('Bootstrap')
   bootstrapLogger.log(`Listening on http://localhost:${port}`)
-  bootstrapLogger.log(`Swagger on http://localhost:${port}/${SWAGGER_PATH}`)
+  if (swaggerEnabled) {
+    bootstrapLogger.log(`Swagger on http://localhost:${port}/${SWAGGER_PATH}`)
+  }
 }
 
 void bootstrap()

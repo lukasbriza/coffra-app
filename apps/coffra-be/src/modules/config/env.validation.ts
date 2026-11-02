@@ -3,6 +3,7 @@ import 'reflect-metadata'
 import { plainToInstance, Transform, Type } from 'class-transformer'
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -12,6 +13,7 @@ import {
   Max,
   Min,
   MinLength,
+  ValidateIf,
   validateSync,
 } from 'class-validator'
 
@@ -35,7 +37,7 @@ const MAX_TRUST_PROXY_HOPS = 10
  * @param value - the raw value of the variable
  * @returns the entries of the list, or `value` itself when it is not a string
  */
-function parseOrigins(value: unknown): unknown {
+const parseOrigins = (value: unknown): unknown => {
   if (typeof value !== 'string') {
     return value
   }
@@ -47,6 +49,25 @@ function parseOrigins(value: unknown): unknown {
 }
 
 /**
+ * Turns the raw `SWAGGER_ENABLED` into a boolean: `true` and `false` as written, empty or left out as not set (the
+ * default then depends on `NODE_ENV`). Any other value is returned as it is, so the validation of the property reports it.
+ *
+ * @param value - the raw value of the variable
+ * @returns `true`, `false`, `undefined` for not set, or `value` itself
+ */
+const parseBoolean = (value: unknown): unknown => {
+  if (value === undefined || value === '') {
+    return undefined
+  }
+
+  if (value === 'true' || value === 'false') {
+    return value === 'true'
+  }
+
+  return value
+}
+
+/**
  * Tells whether `value` is an origin in the exact spelling a browser sends in the `Origin` header: `http` or `https`,
  * the host in lower case, no default port, no path, no trailing slash. CORS compares the strings, so anything else
  * would never match.
@@ -54,7 +75,7 @@ function parseOrigins(value: unknown): unknown {
  * @param value - one entry of `CORS_ORIGINS`
  * @returns `true` for a canonical origin
  */
-function isCanonicalOrigin(value: string): boolean {
+const isCanonicalOrigin = (value: string): boolean => {
   try {
     const url = new URL(value)
 
@@ -92,6 +113,11 @@ function isCanonicalOrigin(value: string): boolean {
  * left out
  * @property RATE_LIMIT_AUTH_MAX - requests one address may send per window to the login routes together; `10` when
  * left out
+ * @property SWAGGER_ENABLED - whether the Swagger UI and the OpenAPI document are served under `/api/swagger`; `true`
+ * or `false`, by default on outside production and off in production (always set after `validateEnv`)
+ * @property REDIS_URL - Redis (`redis://` or `rediss://`) that keeps the rate limit counters, however many replicas of
+ * the application run. Required, like the database: the application connects with the first command, and refuses
+ * counted requests with `503` while Redis does not answer
  */
 export class Env {
   @IsEnum(NodeEnv)
@@ -169,6 +195,14 @@ export class Env {
   @IsInt()
   @Min(1)
   RATE_LIMIT_AUTH_MAX = 10
+
+  @Matches(/^rediss?:\/\/.+/, { message: 'REDIS_URL must be a redis:// or rediss:// connection string' })
+  REDIS_URL!: string
+
+  @Transform(({ value }: { value: unknown }) => parseBoolean(value))
+  @ValidateIf((_env, value) => value !== undefined)
+  @IsBoolean({ message: 'SWAGGER_ENABLED must be true or false' })
+  SWAGGER_ENABLED?: boolean
 }
 
 /**
@@ -176,14 +210,15 @@ export class Env {
  *
  * Besides the rules on each variable it checks that the three secrets differ, so one kind of signed value is never
  * accepted as another, that production uses `https` for the issuer and the redirect URI, and that every entry of
- * `CORS_ORIGINS` is an origin in the exact spelling of the `Origin` header. The message never includes values, so
+ * `CORS_ORIGINS` is an origin in the exact spelling of the `Origin` header. `SWAGGER_ENABLED` left out becomes `true`
+ * outside production and `false` in production. The message never includes values, so
  * secrets cannot leak into logs.
  *
  * @param config - the raw environment, variable name to value
  * @returns the validated variables with their defaults filled in
  * @throws Error listing one `VARIABLE: reason` per line when anything is invalid
  */
-export function validateEnv(config: Record<string, unknown>): Env {
+export const validateEnv = (config: Record<string, unknown>): Env => {
   const env = plainToInstance(Env, config)
   const errors = validateSync(env, { skipMissingProperties: false })
 
@@ -230,6 +265,9 @@ export function validateEnv(config: Record<string, unknown>): Env {
       }
     }
   }
+
+  // The API documentation is for development: production serves it only when asked to.
+  env.SWAGGER_ENABLED ??= env.NODE_ENV !== NodeEnv.Production
 
   if (problems.length > 0) {
     throw new Error(`Invalid environment configuration:\n${problems.map((problem) => `  - ${problem}`).join('\n')}`)

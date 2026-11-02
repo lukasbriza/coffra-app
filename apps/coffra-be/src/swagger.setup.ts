@@ -16,12 +16,13 @@ export const SWAGGER_PATH = `${GLOBAL_PREFIX}/swagger`
  * @param app - the configured application whose routes are documented
  * @returns the OpenAPI document
  */
-export function buildSwaggerDocument(app: INestApplication): OpenAPIObject {
+export const buildSwaggerDocument = (app: INestApplication): OpenAPIObject => {
   const config = new DocumentBuilder()
     .setTitle('coffra-be API')
     .setDescription(
       'Personal finance overview API. Requests are limited per client address: past the limit a request is answered ' +
-        'with 429 and a Retry-After header (seconds), the login routes have a lower limit than the rest.',
+        'with 429 and a Retry-After header (seconds), the login routes have a lower limit than the rest. While the ' +
+        'store of the limit does not answer, requests are answered with 503 and a Retry-After header.',
     )
     .setVersion('1.0')
     .addBearerAuth()
@@ -44,7 +45,7 @@ export function buildSwaggerDocument(app: INestApplication): OpenAPIObject {
  *
  * @param app - the configured application to document
  */
-export function setupSwagger(app: INestApplication): void {
+export const setupSwagger = (app: INestApplication): void => {
   app.use(
     `/${SWAGGER_PATH}`,
     contentSecurityPolicy({ useDefaults: true, directives: { 'upgrade-insecure-requests': null } }),

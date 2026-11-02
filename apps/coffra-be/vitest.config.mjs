@@ -25,6 +25,10 @@ export const TEST_ENV = {
   RATE_LIMIT_TTL_SECONDS: '60',
   RATE_LIMIT_MAX: '120',
   RATE_LIMIT_AUTH_MAX: '10',
+  // The Redis of the dev compose, but a dummy here: the connection is lazy, and no spec of `pnpm test` sends it a
+  // command (the whole-app specs get `fakeRedis()`, the specs of the limit count in memory, see `rate-limit-overrides`).
+  REDIS_URL: 'redis://127.0.0.1:6389',
+  SWAGGER_ENABLED: 'true',
 }
 
 export default defineConfig({
