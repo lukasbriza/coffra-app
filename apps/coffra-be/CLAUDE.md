@@ -13,7 +13,7 @@ covers only what is specific to a NestJS app.
 
 - `src/main.ts` — bootstrap (Nest factory, port from `ConfigService`).
 - `src/app.setup.ts` — `configureApp(app, options?)`: trust proxy (`options.trustProxyHops`), `helmet` (strict CSP of a JSON API), CORS (`options.corsOrigins`, none by default), global prefix `api`, `cookie-parser`, `ValidationPipe`, shutdown hooks. Shared with tests; `main.ts` fills `AppOptions` (`src/app.types.ts`) from the environment (see HTTP hardening).
-- `src/swagger.setup.ts` — `buildSwaggerDocument` / `setupSwagger` (bearer auth as a global requirement that `@Public()` clears per operation, UI at `/api/swagger` with its own, looser Content-Security-Policy). `main.ts` mounts it only when `SWAGGER_ENABLED` (by default not in production, ADR 0027).
+- `src/swagger.setup.ts` — `buildSwaggerDocument` / `setupSwagger` (bearer auth as a global requirement that `@Public()` clears per operation, UI at `/api/swagger` with its own, looser Content-Security-Policy). `main.ts` mounts it only when `SWAGGER_ENABLED` (by default not in production, ADR 0027). The same document is exported for the frontends by `pnpm openapi:export` (see OpenAPI export).
 - `src/modules/rate-limit/` — `RateLimitModule`: the global rate limit (`@nestjs/throttler`, `RateLimitGuard`, counters in Redis), `@StrictRateLimit()` and `@SkipRateLimit()`; see HTTP hardening.
 - `src/modules/health/` — `GET /api/health` (`@nestjs/terminus`): the database (`PrismaHealthIndicator`, `SELECT 1`) and Redis (`RedisHealthIndicator`, `PING`).
 - `src/modules/redis/` — `RedisModule` (global): `RedisService`, the `ioredis` client on `REDIS_URL` (lazy, fails fast, closed after the HTTP server stops), used by the rate limit and the health probe. Like `PrismaService`, never a second client in `src/`.
@@ -136,7 +136,7 @@ Set by `transactions/accounts` (T14); categories, transactions and transfers fol
 - **Tests mirror `src/`**: module tests in `test/modules/<module>/…` (plus the feature folder when the module has one, e.g. `test/modules/core/auth/`), util tests in `test/utils/`, tests of the root setup files (`app.setup.ts`, `swagger.setup.ts`) in `test/app.setup/`, one spec per use case.
 - **One spec file per use case** for a controller, service or provider: a folder named after the source file (`auth.service.ts` → `test/modules/core/auth/auth.service/`) holds `<use-case>.spec.ts` in kebab-case (`complete-login.spec.ts`, `refresh.spec.ts`; a controller by endpoint: `login.spec.ts`, `callback.spec.ts`), `dependency-injection.spec.ts` for the `@Inject` check, and a `setup.ts` with the fixtures and a `use<Subject>()` function that registers the `beforeEach`/`afterEach` of the block it is called in and returns the mocks. Helpers shared by several folders sit next to them (`auth/use-quiet-warnings.ts`). A small file with one subject and one use case stays a plain `<subject>.spec.ts` (`env.validation.spec.ts`, a util). `setup.ts` and the helpers are not `*.spec.ts`, so vitest does not run them, and `eslint.config.mjs` allows devDependencies in all of `test/`.
 - A spec that mocks a module (`vi.mock('openid-client', …)`) repeats the `vi.mock` call in every file: it is hoisted per file and cannot live in `setup.ts`.
-- **Specs need no `.env`.** `vitest.config.mjs` (`test.env`) sets a complete dummy environment for the whole run, because importing anything from `src/modules/config` validates the environment at once. `process.env` wins over a developer's `.env`, so the run is the same on every machine and in CI. A new variable in `env.validation.ts`, required or not, gets a value there too. A spec that needs other values stubs them (`vi.stubEnv`) before the import.
+- **Specs need no `.env`.** `vitest.config.mjs` (`test.env`) sets a complete dummy environment for the whole run, because importing anything from `src/modules/config` validates the environment at once. `process.env` wins over a developer's `.env`, so the run is the same on every machine and in CI. A new variable in `env.validation.ts`, required or not, gets a value there too, and in `EXPORT_ENV` (`scripts/openapi/constants.ts`: `pnpm ts` fails without it). A spec that needs other values stubs them (`vi.stubEnv`) before the import.
 - **A bootstrap of the whole `AppModule` replaces the rate limit** with `withoutRateLimit(builder)` and, in `pnpm test`, Redis with `fakeRedis()`, or the suite meets a `429` or needs Docker: see HTTP hardening → Specs.
 - **The linter rewrites `http://` to `https://` in a string literal** (not for `localhost`), also in specs: a case about plain http is written with `localhost` or built (`ORIGIN.replace('https:', 'http:')`), or it silently tests the https one.
 - **Two vitest projects, few workers.** `unit` (everything outside `test/e2e/`, 2 workers) runs first, then `e2e` (`test/e2e/**`, one file at a time). The specs open many short-lived loopback connections (supertest, the fake IdP); with more parallelism, connection setup on some Windows machines stalls in steps of 10 s and specs fail on timeouts that have nothing to do with the code. Do not raise `maxWorkers` or turn `fileParallelism` back on without checking that on such a machine. `pnpm test:e2e` / `pnpm test:unit` runs one project. The integration suite is not a project of this config: it has its own (below), so `pnpm test` never needs a database.
@@ -156,12 +156,12 @@ Set by `transactions/accounts` (T14); categories, transactions and transfers fol
   - A transaction that points to a category of another user cannot be made through the API (a `404`), but the database allows it. `isolation/dashboard.spec.ts` writes it through Prisma and expects a `500` that does not contain the name of that category.
 - `openid-client` does not verify the ID token signature in the code flow (the token comes straight from the token endpoint over TLS: OIDC Core 3.1.3.7 step 6). That is why an `https:` issuer is mandatory in production, and why no spec can test a forged ID token signature.
 - **Type files hold types only.** A module with its own types names the file `<module>.types.ts` (`core/users/users.types.ts`); a feature folder whose types are shared by several files (`core/auth/types.ts`) uses plain `types.ts`. Runtime values (DI tokens, cookie names, metadata keys, numeric limits) live in a plain `constants.ts` inside a feature folder (`core/auth/constants.ts`, `transactions/transactions/constants.ts`, `transactions/accounts/constants.ts`), even when one file only uses them: never `<feature>.constants.ts` there. An infrastructure module that is the whole folder is no exception for a new file (`rate-limit/constants.ts`); `prisma/prisma.constants.ts` is older and stays as it is.
-- **Inject with `@Inject(Token)` on every constructor parameter.** Vitest (esbuild) emits no decorator metadata, so type-based injection resolves to `undefined` in `Test.createTestingModule`.
+- **Inject with `@Inject(Token)` on every constructor parameter,** so injection does not depend on the decorator metadata of whatever compiles the code. `tsx` (esbuild) emits none, and type-based injection resolves to `undefined` there; `tsc` and Vitest 4 on Vite 8 (Oxc) emit it (checked 2026-11-03: a provider without `@Inject` resolves in `Test.createTestingModule`, and the OpenAPI document Vitest builds is byte for byte the one of `nest build`).
 - `@nestjs/terminus` is pinned to 11.x: 12.x is ESM-only and this app is CommonJS.
 - `openid-client` 6.x is ESM-only too and loads through `require(esm)`: that needs `"module": "node20"` in this app's `tsconfig.json` (otherwise TS1479) and Node >= 22.12. See ADR 0008.
 - `OIDC_ISSUER_URL` over plain `http:` works outside production only (dev Keycloak). A production start with it fails env validation, so `pnpm start` (`NODE_ENV=production`) needs an `https:` issuer.
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` and `AUTH_CHECKS_SECRET` must all differ (env validation enforces it), so one kind of signed value is never accepted as another. In production `OIDC_REDIRECT_URI` must be `https:` too (the login cookie is `Secure`).
-- Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`; `pnpm db:seed` fills the dev database with demo data (see Demo data); `pnpm test:integration` needs Postgres and Redis (`pnpm infra:up`); `pnpm test:image` needs Docker, the image (`pnpm image:build`), Postgres and Redis.
+- Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`; `pnpm db:seed` fills the dev database with demo data (see Demo data); `pnpm openapi:export --out <file>` writes the OpenAPI document (see OpenAPI export); `pnpm test:integration` needs Postgres and Redis (`pnpm infra:up`); `pnpm test:image` needs Docker, the image (`pnpm image:build`), Postgres and Redis.
 
 ## Dev environment (Postgres + Keycloak)
 
@@ -255,6 +255,35 @@ Security headers, CORS, the client address behind a proxy (ADR 0025), the rate l
 - **Runner:** `tsx` (a `devDependency`), because `ts-node` cannot load the generated client (`./enums.js` is a `.ts` file). `scripts/` is type-checked and linted but not built and not in the image; a command that has to run from the image goes in `src/` (see Container image).
 - The seed is a development tool, not a domain: it writes `userId` itself instead of going through `OwnershipService`. That is allowed only here and in the test support (`seedWorld`).
 - **Specs:** `test/scripts/seed/` (unit, no database: the ledger with amounts worked out by hand, in six time zones; the guard; `DEMO_USER` against the realm file) and `test/integration/seed/` (balances and dashboard through the API against numbers worked out by hand and against the independent SQL, a second run, other users untouched, a failure half way, the command line itself). A change of `demo-data.ts` changes those numbers: work them out again from the table, do not copy them from the output.
+
+## OpenAPI export and the API contract
+
+`pnpm openapi:export --out <file>` writes the OpenAPI document of the app, the one `/api/swagger-json` serves, without
+a database, Redis or `.env` (ADR 0028). The frontends use it through `@lukasbriza/coffra-api` (`packages/coffra-api`),
+where it is committed as `src/schema.json` with the types generated from it.
+
+- **After a change of a controller or a DTO** run `pnpm --filter @lukasbriza/coffra-api api-schema:update` and commit
+  both schemas with the change: `test/scripts/openapi/published-schema.spec.ts` fails until the committed document is
+  the one of the code (turbo knows the file through the `inputs` of `test` in `turbo.json`).
+- **Compiled with `tsc`, not run with `tsx`:** the document needs the decorator metadata and esbuild emits none
+  (`[TokenPairDto] A circular dependency has been detected…` under `tsx`). `tsconfig.openapi.json` compiles `src` and
+  `scripts/openapi` into `build/openapi/` (an intermediate result; `rimraf build` may delete it), then `node` runs
+  `build/openapi/scripts/openapi/main.js`. About five seconds.
+- **Nothing connects:** `buildOpenApiDocument(rootModule)` creates the app in the preview mode of Nest (no provider is
+  instantiated, no module started, no log) and runs `configureApp` without options; a module that cannot be built
+  rejects. `main.ts` sets `EXPORT_ENV` (every variable of the app, production, nothing real) over the process and any
+  `.env` before it imports anything from `src/`, so the document does not depend on the machine or on `SWAGGER_ENABLED`.
+- **Stable text:** keys sorted by code units at every depth, arrays in their order, two spaces, `\n`, one `\n` at the
+  end; two exports of the same code are byte-identical. `--out` is required.
+- **Layout:** `scripts/openapi/` — `main.ts` (command line), `build-open-api-document.ts`, `serialize-open-api.ts`,
+  `parse-export-args.ts`, `constants.ts` (`EXPORT_ENV`, `OPERATION_METHODS`, `EXPORT_USAGE`), `types.ts`, `utils/` one
+  function per file.
+- **Specs:** `test/scripts/openapi/` builds the document of the real `AppModule` in the process (every route of the
+  controllers and nothing else, the bearer requirement and `security: [{}]` exactly on the five public routes, no
+  provider created, a broken module rejects, the same text twice) and checks the published contract;
+  `test/e2e/openapi/cli.spec.ts` compiles the command like `pnpm openapi:export` and runs it in a process of its own,
+  with no environment and no `.env`, and with a hostile one, and expects the bytes of the in-process document. That
+  comparison is what fails first if a compiler upgrade stops Vitest from emitting the metadata as `tsc` does.
 
 ## Prisma 7 (optional)
 

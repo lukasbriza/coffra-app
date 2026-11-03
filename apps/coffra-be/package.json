@@ -20,6 +20,7 @@
     "postinstall": "prisma generate",
     "lint": "eslint --cache .",
     "lint:fix": "pnpm run lint --fix",
+    "openapi:export": "tsc -p tsconfig.openapi.json && node build/openapi/scripts/openapi/main.js",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

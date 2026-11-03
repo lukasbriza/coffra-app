@@ -63,3 +63,4 @@ and mark the old one `Superseded by NNNN`.
 | [0025](./0025-http-hardening.md)                     | HTTP hardening: strict CSP, CORS allow-list, rate limit buckets   | Accepted |
 | [0026](./0026-rate-limit-in-redis.md)                | Rate limit counters in Redis, 503 while Redis is away             | Accepted |
 | [0027](./0027-swagger-off-in-production.md)          | Swagger UI off in production by default                           | Accepted |
+| [0028](./0028-openapi-export-and-api-contract.md)    | OpenAPI export compiled with tsc, contract in the API package     | Accepted |

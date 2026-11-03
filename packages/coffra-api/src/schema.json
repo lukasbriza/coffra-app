@@ -1,0 +1,1921 @@
+{
+  "components": {
+    "schemas": {
+      "AccountDto": {
+        "properties": {
+          "balance": {
+            "description": "Decimal string with four decimal places, in the currency of the account: the opening balance plus income and incoming transfers, minus expenses and outgoing transfers, of the transactions dated up to `asOf` (today in UTC by default). May be negative.",
+            "example": "4500.5500",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Three capital letters, fixed since the account was created",
+            "example": "CZK",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "example": "Main account",
+            "type": "string"
+          },
+          "openingBalance": {
+            "description": "Decimal string with four decimal places",
+            "example": "-1500.2500",
+            "type": "string"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AccountType"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "currency",
+          "openingBalance",
+          "balance"
+        ],
+        "type": "object"
+      },
+      "AccountType": {
+        "enum": [
+          "bank",
+          "cash"
+        ],
+        "type": "string"
+      },
+      "CategoryDto": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "example": "Food",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "CategoryTotalsDto": {
+        "properties": {
+          "categoryId": {
+            "description": "Id of the category; `null` on the row that sums the transactions that have no category",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "expense": {
+            "description": "Sum of the expense, a decimal string with four decimal places",
+            "example": "12000.0000",
+            "type": "string"
+          },
+          "income": {
+            "description": "Sum of the income, a decimal string with four decimal places",
+            "example": "0.0000",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name of the category; `null` together with `categoryId`",
+            "example": "Food",
+            "nullable": true,
+            "type": "string"
+          },
+          "net": {
+            "description": "`income` minus `expense`, a decimal string with four decimal places; negative when more was spent",
+            "example": "-12000.0000",
+            "type": "string"
+          }
+        },
+        "required": [
+          "categoryId",
+          "name",
+          "income",
+          "expense",
+          "net"
+        ],
+        "type": "object"
+      },
+      "CreateAccountDto": {
+        "properties": {
+          "currency": {
+            "description": "Three capital letters (ISO 4217 format, the list itself is not checked). Set on create only.",
+            "example": "CZK",
+            "pattern": "^[A-Z]{3}$",
+            "type": "string"
+          },
+          "name": {
+            "description": "Trimmed, not unique",
+            "example": "Main account",
+            "maxLength": 100,
+            "type": "string"
+          },
+          "openingBalance": {
+            "default": "0",
+            "description": "Balance before the first recorded transaction: a decimal string, may be negative",
+            "example": "-1500.25",
+            "type": "string"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AccountType"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "currency"
+        ],
+        "type": "object"
+      },
+      "CreateCategoryDto": {
+        "properties": {
+          "name": {
+            "description": "Trimmed, unique per user, case-sensitive: `Food` and `food` are two categories",
+            "example": "Food",
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "CreateTransactionDto": {
+        "properties": {
+          "accountId": {
+            "description": "An account of the signed-in user; the amount is in its currency",
+            "format": "uuid",
+            "type": "string"
+          },
+          "amount": {
+            "description": "Decimal string greater than zero, at most 4 decimal places; the sign comes from `type`",
+            "example": "1250.5",
+            "type": "string"
+          },
+          "categoryId": {
+            "description": "A category of the signed-in user; null or left out for none",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "date": {
+            "description": "Calendar day, no time and no time zone",
+            "example": "2026-10-19",
+            "format": "date",
+            "type": "string"
+          },
+          "note": {
+            "description": "Trimmed; blank or null means no note",
+            "example": "Lunch",
+            "maxLength": 500,
+            "nullable": true,
+            "type": "string"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IncomeExpenseType"
+              }
+            ],
+            "description": "A transfer between own accounts has an API of its own"
+          }
+        },
+        "required": [
+          "accountId",
+          "type",
+          "amount",
+          "date"
+        ],
+        "type": "object"
+      },
+      "CreateTransferDto": {
+        "properties": {
+          "amount": {
+            "description": "Decimal string greater than zero, at most 4 decimal places, in the currency of both accounts",
+            "example": "5000",
+            "type": "string"
+          },
+          "date": {
+            "description": "Calendar day, no time and no time zone",
+            "example": "2026-10-21",
+            "format": "date",
+            "type": "string"
+          },
+          "fromAccountId": {
+            "description": "The account the money leaves: an account of the signed-in user",
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "description": "One note for both transactions; trimmed, blank or null means no note",
+            "example": "Savings",
+            "maxLength": 500,
+            "nullable": true,
+            "type": "string"
+          },
+          "toAccountId": {
+            "description": "The account the money arrives to: another account of the signed-in user, in the same currency",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromAccountId",
+          "toAccountId",
+          "amount",
+          "date"
+        ],
+        "type": "object"
+      },
+      "CurrencyTotalsDto": {
+        "properties": {
+          "categories": {
+            "description": "The categories the totals are made of, the one with the largest `income + expense` first. The transactions without a category are the last row.",
+            "items": {
+              "$ref": "#/components/schemas/CategoryTotalsDto"
+            },
+            "type": "array"
+          },
+          "currency": {
+            "description": "Three capital letters. Amounts of two currencies are never added.",
+            "example": "CZK",
+            "type": "string"
+          },
+          "expense": {
+            "description": "Sum of the expense of every category, a decimal string with four decimal places",
+            "example": "31250.5000",
+            "type": "string"
+          },
+          "income": {
+            "description": "Sum of the income of every category, a decimal string with four decimal places",
+            "example": "52000.0000",
+            "type": "string"
+          },
+          "net": {
+            "description": "`income` minus `expense`, a decimal string with four decimal places; negative when more was spent",
+            "example": "20749.5000",
+            "type": "string"
+          },
+          "trend": {
+            "description": "The totals month by month, the oldest first: one entry for every calendar month of the window (3, 6 or 12), so a month without a transaction is there with zeros. The months add up to the totals of the currency.",
+            "items": {
+              "$ref": "#/components/schemas/MonthTotalsDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "currency",
+          "income",
+          "expense",
+          "net",
+          "categories",
+          "trend"
+        ],
+        "type": "object"
+      },
+      "DashboardDto": {
+        "properties": {
+          "currencies": {
+            "description": "One entry per currency that has at least one transaction in the window, in alphabetical order. Transfers and the opening balance of an account are not counted; planned transactions dated inside the window are. Empty when nothing falls in the window.",
+            "items": {
+              "$ref": "#/components/schemas/CurrencyTotalsDto"
+            },
+            "type": "array"
+          },
+          "from": {
+            "description": "First day of the window: the first day of the oldest month",
+            "example": "2026-08-01",
+            "format": "date",
+            "type": "string"
+          },
+          "period": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DashboardPeriod"
+              }
+            ],
+            "description": "The period that was used",
+            "example": "3m"
+          },
+          "to": {
+            "description": "Last day of the window: the last day of the current month",
+            "example": "2026-10-31",
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "from",
+          "to",
+          "currencies"
+        ],
+        "type": "object"
+      },
+      "DashboardPeriod": {
+        "enum": [
+          "3m",
+          "6m",
+          "1y"
+        ],
+        "type": "string"
+      },
+      "IncomeExpenseType": {
+        "description": "A transfer between own accounts has an API of its own",
+        "enum": [
+          "income",
+          "expense"
+        ],
+        "type": "string"
+      },
+      "ListOrder": {
+        "enum": [
+          "desc",
+          "asc"
+        ],
+        "type": "string"
+      },
+      "LogoutResponseDto": {
+        "properties": {
+          "endSessionUrl": {
+            "description": "Navigate the browser here to end the session at the identity provider. `null` when the provider has no end-session endpoint.",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "endSessionUrl"
+        ],
+        "type": "object"
+      },
+      "MonthTotalsDto": {
+        "properties": {
+          "expense": {
+            "description": "Sum of the expense of the month, a decimal string with four decimal places",
+            "example": "9800.0000",
+            "type": "string"
+          },
+          "income": {
+            "description": "Sum of the income of the month, a decimal string with four decimal places",
+            "example": "26000.0000",
+            "type": "string"
+          },
+          "month": {
+            "description": "The calendar month in UTC, `YYYY-MM`",
+            "example": "2026-08",
+            "pattern": "^\\d{4}-\\d{2}$",
+            "type": "string"
+          },
+          "net": {
+            "description": "`income` minus `expense`, a decimal string with four decimal places; negative when more was spent",
+            "example": "16200.0000",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "income",
+          "expense",
+          "net"
+        ],
+        "type": "object"
+      },
+      "RefreshTokenDto": {
+        "properties": {
+          "refreshToken": {
+            "description": "The refresh token from the callback or the previous refresh",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "type": "object"
+      },
+      "TokenPairDto": {
+        "properties": {
+          "accessToken": {
+            "description": "Short-lived JWT for the `Authorization: Bearer` header",
+            "type": "string"
+          },
+          "expiresIn": {
+            "description": "Lifetime of the access token in seconds",
+            "example": 900,
+            "type": "number"
+          },
+          "refreshToken": {
+            "description": "JWT for `POST /api/auth/refresh` only, never accepted as an access token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "expiresIn"
+        ],
+        "type": "object"
+      },
+      "TransactionDto": {
+        "properties": {
+          "accountId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "amount": {
+            "description": "Positive decimal string with four decimal places, in the currency of the account. The sign comes from `type` and `transferDirection`.",
+            "example": "1250.5000",
+            "type": "string"
+          },
+          "categoryId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "date": {
+            "description": "Calendar day",
+            "example": "2026-10-19",
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "example": "Lunch",
+            "nullable": true,
+            "type": "string"
+          },
+          "transferDirection": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TransferDirection"
+              }
+            ],
+            "description": "`out` leaves the account, `in` arrives to it; null outside a transfer",
+            "nullable": true
+          },
+          "transferPairId": {
+            "description": "Shared by both sides of a transfer, null otherwise; the `pairId` of the transfer in `/api/transfers`",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TransactionType"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "type",
+          "amount",
+          "date",
+          "note",
+          "categoryId",
+          "transferPairId",
+          "transferDirection"
+        ],
+        "type": "object"
+      },
+      "TransactionPageDto": {
+        "properties": {
+          "items": {
+            "description": "In the requested order; empty when nothing matches",
+            "items": {
+              "$ref": "#/components/schemas/TransactionDto"
+            },
+            "type": "array"
+          },
+          "nextCursor": {
+            "description": "Pass as `cursor`, with the same `order` and filters, for the next page; null on the last page",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object"
+      },
+      "TransactionType": {
+        "enum": [
+          "income",
+          "expense",
+          "transfer"
+        ],
+        "type": "string"
+      },
+      "TransferDirection": {
+        "description": "`out` leaves the account, `in` arrives to it; null outside a transfer",
+        "enum": [
+          "out",
+          "in"
+        ],
+        "type": "string"
+      },
+      "TransferDto": {
+        "properties": {
+          "amount": {
+            "description": "Positive decimal string with four decimal places, in the currency of both accounts",
+            "example": "5000.0000",
+            "type": "string"
+          },
+          "date": {
+            "description": "Calendar day",
+            "example": "2026-10-21",
+            "format": "date",
+            "type": "string"
+          },
+          "fromAccountId": {
+            "description": "The account the money leaves (the `out` transaction)",
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "description": "One note for both transactions",
+            "example": "Savings",
+            "nullable": true,
+            "type": "string"
+          },
+          "pairId": {
+            "description": "Id of the transfer: the `transferPairId` of both of its transactions in `/api/transactions`",
+            "format": "uuid",
+            "type": "string"
+          },
+          "toAccountId": {
+            "description": "The account the money arrives to (the `in` transaction)",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pairId",
+          "fromAccountId",
+          "toAccountId",
+          "amount",
+          "date",
+          "note"
+        ],
+        "type": "object"
+      },
+      "UpdateAccountDto": {
+        "properties": {
+          "name": {
+            "description": "Trimmed, not unique",
+            "example": "Main account",
+            "maxLength": 100,
+            "type": "string"
+          },
+          "openingBalance": {
+            "default": "0",
+            "description": "Balance before the first recorded transaction: a decimal string, may be negative",
+            "example": "-1500.25",
+            "type": "string"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AccountType"
+              }
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "UpdateCategoryDto": {
+        "properties": {
+          "name": {
+            "description": "Trimmed, unique per user, case-sensitive: `Food` and `food` are two categories",
+            "example": "Food",
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateTransactionDto": {
+        "properties": {
+          "accountId": {
+            "description": "An account of the signed-in user; the amount is in its currency",
+            "format": "uuid",
+            "type": "string"
+          },
+          "amount": {
+            "description": "Decimal string greater than zero, at most 4 decimal places; the sign comes from `type`",
+            "example": "1250.5",
+            "type": "string"
+          },
+          "categoryId": {
+            "description": "A category of the signed-in user; null or left out for none",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "date": {
+            "description": "Calendar day, no time and no time zone",
+            "example": "2026-10-19",
+            "format": "date",
+            "type": "string"
+          },
+          "note": {
+            "description": "Trimmed; blank or null means no note",
+            "example": "Lunch",
+            "maxLength": 500,
+            "nullable": true,
+            "type": "string"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IncomeExpenseType"
+              }
+            ],
+            "description": "A transfer between own accounts has an API of its own"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateTransferDto": {
+        "properties": {
+          "amount": {
+            "description": "Decimal string greater than zero, at most 4 decimal places, in the currency of both accounts",
+            "example": "5000",
+            "type": "string"
+          },
+          "date": {
+            "description": "Calendar day, no time and no time zone",
+            "example": "2026-10-21",
+            "format": "date",
+            "type": "string"
+          },
+          "fromAccountId": {
+            "description": "The account the money leaves: an account of the signed-in user",
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "description": "One note for both transactions; trimmed, blank or null means no note",
+            "example": "Savings",
+            "maxLength": 500,
+            "nullable": true,
+            "type": "string"
+          },
+          "toAccountId": {
+            "description": "The account the money arrives to: another account of the signed-in user, in the same currency",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UserDto": {
+        "properties": {
+          "email": {
+            "description": "Email as the identity provider reported it at the last login",
+            "type": "string"
+          },
+          "id": {
+            "description": "The user id, the `sub` claim of the access token",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "bearerFormat": "JWT",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "contact": {},
+    "description": "Personal finance overview API. Requests are limited per client address: past the limit a request is answered with 429 and a Retry-After header (seconds), the login routes have a lower limit than the rest. While the store of the limit does not answer, requests are answered with 503 and a Retry-After header.",
+    "title": "coffra-be API",
+    "version": "1.0"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/accounts": {
+      "get": {
+        "operationId": "AccountsController_list",
+        "parameters": [
+          {
+            "description": "Count the transactions up to this day, inclusive. Left out: today in UTC, so a transaction dated later does not count yet. A later day adds the planned ones. A client west or east of UTC sends its own date to count its today.",
+            "in": "query",
+            "name": "asOf",
+            "required": false,
+            "schema": {
+              "example": "2026-10-22",
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccountDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The accounts"
+          },
+          "400": {
+            "description": "`asOf` is not a calendar day `YYYY-MM-DD`, or is given more than once"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          }
+        },
+        "summary": "The accounts of the signed-in user, by name, each with its balance up to `asOf`",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "post": {
+        "operationId": "AccountsController_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAccountDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDto"
+                }
+              }
+            },
+            "description": "The new account"
+          },
+          "400": {
+            "description": "Invalid input, or an id that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          }
+        },
+        "summary": "Create an account; its balance is its opening balance",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/accounts/{id}": {
+      "delete": {
+        "operationId": "AccountsController_remove",
+        "parameters": [
+          {
+            "description": "Account id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "400": {
+            "description": "Invalid input, or an id that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "No account with this id among the accounts of the signed-in user"
+          },
+          "409": {
+            "description": "The account has transactions"
+          }
+        },
+        "summary": "Delete an account that has no transactions",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "get": {
+        "operationId": "AccountsController_findOne",
+        "parameters": [
+          {
+            "description": "Account id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Count the transactions up to this day, inclusive. Left out: today in UTC, so a transaction dated later does not count yet. A later day adds the planned ones. A client west or east of UTC sends its own date to count its today.",
+            "in": "query",
+            "name": "asOf",
+            "required": false,
+            "schema": {
+              "example": "2026-10-22",
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDto"
+                }
+              }
+            },
+            "description": "The account"
+          },
+          "400": {
+            "description": "An id that is not a UUID, or an `asOf` that is not a calendar day `YYYY-MM-DD` or is given twice"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "No account with this id among the accounts of the signed-in user"
+          }
+        },
+        "summary": "One account with its balance up to `asOf`",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "patch": {
+        "operationId": "AccountsController_update",
+        "parameters": [
+          {
+            "description": "Account id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccountDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDto"
+                }
+              }
+            },
+            "description": "The changed account"
+          },
+          "400": {
+            "description": "Invalid input, a currency, or an id that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "No account with this id among the accounts of the signed-in user"
+          }
+        },
+        "summary": "Change the name, the type or the opening balance. The currency cannot change. The balance in the answer is the one of today.",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/auth/callback": {
+      "get": {
+        "operationId": "AuthController_callback",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPairDto"
+                }
+              }
+            },
+            "description": "The access and refresh token of the user who logged in"
+          },
+          "401": {
+            "description": "Missing or expired login cookie, or the identity provider response is invalid"
+          },
+          "503": {
+            "description": "The identity provider is unavailable"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Finish the OIDC login: validate the response, exchange the code, issue the session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "get": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "responses": {
+          "302": {
+            "description": "Redirect to the identity provider, sets the short-lived login checks cookie"
+          },
+          "503": {
+            "description": "The identity provider is unavailable"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Start the OIDC login (authorization code + PKCE) and redirect to the identity provider",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "description": "Stateless: nothing changes on the server and no token is needed. The client must discard both tokens (the refresh token stays valid until it expires) and navigate the browser to `endSessionUrl`, otherwise the session at the identity provider survives and the next login needs no password.",
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutResponseDto"
+                }
+              }
+            },
+            "description": "Where to send the browser"
+          },
+          "503": {
+            "description": "The identity provider is unavailable"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Get the URL that ends the session at the identity provider",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "description": "The new refresh token ends when the old one would have, so a session lasts at most `JWT_REFRESH_TTL_SECONDS` from the login. The old refresh token is not revoked.",
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPairDto"
+                }
+              }
+            },
+            "description": "A new access and refresh token"
+          },
+          "400": {
+            "description": "The body has no `refreshToken` string"
+          },
+          "401": {
+            "description": "The refresh token is missing, invalid, expired, not a refresh token, or its user no longer exists"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Swap a refresh token for a new token pair",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "operationId": "CategoriesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The categories"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          }
+        },
+        "summary": "The categories of the signed-in user, by name",
+        "tags": [
+          "categories"
+        ]
+      },
+      "post": {
+        "operationId": "CategoriesController_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryDto"
+                }
+              }
+            },
+            "description": "The new category"
+          },
+          "400": {
+            "description": "Invalid input, or an id that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "409": {
+            "description": "The signed-in user already has a category with this name"
+          }
+        },
+        "summary": "Create a category",
+        "tags": [
+          "categories"
+        ]
+      }
+    },
+    "/api/categories/{id}": {
+      "delete": {
+        "operationId": "CategoriesController_remove",
+        "parameters": [
+          {
+            "description": "Category id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "400": {
+            "description": "Invalid input, or an id that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "No category with this id among the categories of the signed-in user"
+          },
+          "409": {
+            "description": "The category has transactions: move or clear them first"
+          }
+        },
+        "summary": "Delete a category that has no transactions",
+        "tags": [
+          "categories"
+        ]
+      },
+      "get": {
+        "operationId": "CategoriesController_findOne",
+        "parameters": [
+          {
+            "description": "Category id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryDto"
+                }
+              }
+            },
+            "description": "The category"
+          },
+          "400": {
+            "description": "Invalid input, or an id that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "No category with this id among the categories of the signed-in user"
+          }
+        },
+        "summary": "One category",
+        "tags": [
+          "categories"
+        ]
+      },
+      "patch": {
+        "operationId": "CategoriesController_update",
+        "parameters": [
+          {
+            "description": "Category id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryDto"
+                }
+              }
+            },
+            "description": "The renamed category"
+          },
+          "400": {
+            "description": "Invalid input, or an id that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "No category with this id among the categories of the signed-in user"
+          },
+          "409": {
+            "description": "The signed-in user already has a category with this name"
+          }
+        },
+        "summary": "Rename a category",
+        "tags": [
+          "categories"
+        ]
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "operationId": "DashboardController_get",
+        "parameters": [
+          {
+            "description": "How far back the dashboard goes, in whole calendar months including the current one: `3m` (three months), `6m` (six months) or `1y` (twelve months). The window starts on the first day of the oldest month and ends on the last day of the current month (UTC), so a transaction planned for later this month counts. Left out: `3m`.",
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DashboardPeriod"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardDto"
+                }
+              }
+            },
+            "description": "The totals, one entry per currency that has a transaction in the window"
+          },
+          "400": {
+            "description": "`period` is not `3m`, `6m` or `1y`, or is given more than once"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          }
+        },
+        "summary": "Income and expense of the signed-in user over the last 3 months, 6 months or a year, per currency and per category",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "details": {
+                      "additionalProperties": {
+                        "additionalProperties": true,
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ],
+                        "type": "object"
+                      },
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "error": {
+                      "additionalProperties": {
+                        "additionalProperties": true,
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ],
+                        "type": "object"
+                      },
+                      "example": {},
+                      "nullable": true,
+                      "type": "object"
+                    },
+                    "info": {
+                      "additionalProperties": {
+                        "additionalProperties": true,
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ],
+                        "type": "object"
+                      },
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "nullable": true,
+                      "type": "object"
+                    },
+                    "status": {
+                      "example": "ok",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "All checks passed\n\nThe Health Check is successful"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "details": {
+                      "additionalProperties": {
+                        "additionalProperties": true,
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ],
+                        "type": "object"
+                      },
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        },
+                        "redis": {
+                          "message": "Could not connect",
+                          "status": "down"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "error": {
+                      "additionalProperties": {
+                        "additionalProperties": true,
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ],
+                        "type": "object"
+                      },
+                      "example": {
+                        "redis": {
+                          "message": "Could not connect",
+                          "status": "down"
+                        }
+                      },
+                      "nullable": true,
+                      "type": "object"
+                    },
+                    "info": {
+                      "additionalProperties": {
+                        "additionalProperties": true,
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ],
+                        "type": "object"
+                      },
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "nullable": true,
+                      "type": "object"
+                    },
+                    "status": {
+                      "example": "error",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "At least one check failed\n\nThe Health Check is not successful"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/transactions": {
+      "get": {
+        "operationId": "TransactionsController_list",
+        "parameters": [
+          {
+            "description": "Only the transactions of this account",
+            "in": "query",
+            "name": "accountId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only the transactions of this category; a transfer has none",
+            "in": "query",
+            "name": "categoryId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/TransactionType"
+            }
+          },
+          {
+            "description": "First day, inclusive",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "example": "2026-10-01",
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day, inclusive; not before `from`",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "example": "2026-10-31",
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "By date, then by the time of recording: `desc` the newest first, `asc` the oldest first",
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ListOrder"
+            }
+          },
+          {
+            "description": "Most transactions on the page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The `nextCursor` of the previous page, as it came, with the same `order` and filters; left out for the first page",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionPageDto"
+                }
+              }
+            },
+            "description": "One page of the matching transactions and the cursor of the next one"
+          },
+          "400": {
+            "description": "A malformed id or date, an unknown type or order, `to` before `from`, `limit` out of range, or a cursor that is not a `nextCursor` or was issued for the other order"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          }
+        },
+        "summary": "Transactions of the signed-in user, filtered, ordered and paged by a cursor; transfer sides included",
+        "tags": [
+          "transactions"
+        ]
+      },
+      "post": {
+        "operationId": "TransactionsController_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTransactionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionDto"
+                }
+              }
+            },
+            "description": "The new transaction"
+          },
+          "400": {
+            "description": "Invalid input, or an id that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "The account or the category of the body is not among those of the signed-in user"
+          }
+        },
+        "summary": "Record an income or an expense",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/transactions/{id}": {
+      "delete": {
+        "operationId": "TransactionsController_remove",
+        "parameters": [
+          {
+            "description": "Transaction id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "400": {
+            "description": "Invalid input, or an id that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "No transaction with this id among the transactions of the signed-in user"
+          },
+          "409": {
+            "description": "The transaction is one side of a transfer: change or delete the transfer instead (`/api/transfers/{transferPairId}`)"
+          }
+        },
+        "summary": "Delete an income or an expense",
+        "tags": [
+          "transactions"
+        ]
+      },
+      "get": {
+        "operationId": "TransactionsController_findOne",
+        "parameters": [
+          {
+            "description": "Transaction id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionDto"
+                }
+              }
+            },
+            "description": "The transaction"
+          },
+          "400": {
+            "description": "Invalid input, or an id that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "No transaction with this id among the transactions of the signed-in user"
+          }
+        },
+        "summary": "One transaction, one side of a transfer included",
+        "tags": [
+          "transactions"
+        ]
+      },
+      "patch": {
+        "operationId": "TransactionsController_update",
+        "parameters": [
+          {
+            "description": "Transaction id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTransactionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionDto"
+                }
+              }
+            },
+            "description": "The changed transaction"
+          },
+          "400": {
+            "description": "Invalid input, or an id that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "No such transaction, account or category among those of the signed-in user (the id, or a reference in the body)"
+          },
+          "409": {
+            "description": "The transaction is one side of a transfer: change or delete the transfer instead (`/api/transfers/{transferPairId}`); or the new account has another currency"
+          }
+        },
+        "summary": "Change an income or an expense: amount, date, note, category, type, or account of the same currency",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/transfers": {
+      "post": {
+        "operationId": "TransfersController_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTransferDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferDto"
+                }
+              }
+            },
+            "description": "The new transfer"
+          },
+          "400": {
+            "description": "Invalid input, the same account on both sides, or a category (a transfer never has one)"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "An account of the body is not among those of the signed-in user"
+          },
+          "409": {
+            "description": "The two accounts have different currencies"
+          }
+        },
+        "summary": "Move money between two own accounts in the same currency",
+        "tags": [
+          "transfers"
+        ]
+      }
+    },
+    "/api/transfers/{pairId}": {
+      "delete": {
+        "operationId": "TransfersController_remove",
+        "parameters": [
+          {
+            "description": "Id of the transfer: the `transferPairId` of both of its transactions",
+            "in": "path",
+            "name": "pairId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "400": {
+            "description": "The pairId is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "No transfer with this pairId among the transactions of the signed-in user"
+          }
+        },
+        "summary": "Delete a transfer, both of its transactions at once",
+        "tags": [
+          "transfers"
+        ]
+      },
+      "patch": {
+        "operationId": "TransfersController_update",
+        "parameters": [
+          {
+            "description": "Id of the transfer: the `transferPairId` of both of its transactions",
+            "in": "path",
+            "name": "pairId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTransferDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferDto"
+                }
+              }
+            },
+            "description": "The changed transfer"
+          },
+          "400": {
+            "description": "Invalid input, the same account twice in the body, a category, or a pairId that is not a UUID"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired"
+          },
+          "404": {
+            "description": "No such transfer, or a new account that is not among those of the signed-in user"
+          },
+          "409": {
+            "description": "A new account has another currency than the transfer, or with the side that stays the same account would be on both sides"
+          }
+        },
+        "summary": "Change a transfer, both of its transactions at once: amount, date, note, or an account of the same currency",
+        "tags": [
+          "transfers"
+        ]
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "operationId": "UsersController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            },
+            "description": "The signed-in user"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired, or its user no longer exists"
+          }
+        },
+        "summary": "The user the access token was issued to",
+        "tags": [
+          "users"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "servers": [],
+  "tags": []
+}

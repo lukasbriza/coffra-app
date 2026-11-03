@@ -190,6 +190,37 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.31.3)(tsx@4.23.0)(yaml@2.9.0)
 
+  packages/coffra-api:
+    dependencies:
+      openapi-fetch:
+        specifier: 0.17.0
+        version: 0.17.0
+      openapi-react-query:
+        specifier: 0.5.4
+        version: 0.5.4(@tanstack/react-query@5.101.2(react@19.2.7))(openapi-fetch@0.17.0)
+    devDependencies:
+      '@lukasbriza/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@lukasbriza/ts-config':
+        specifier: workspace:*
+        version: link:../ts-config
+      '@tanstack/react-query':
+        specifier: 5.101.2
+        version: 5.101.2(react@19.2.7)
+      '@types/node':
+        specifier: 22.20.1
+        version: 22.20.1
+      '@types/react':
+        specifier: 19.2.17
+        version: 19.2.17
+      openapi-typescript:
+        specifier: 7.13.0
+        version: 7.13.0(typescript@5.9.3)
+      react:
+        specifier: 19.2.7
+        version: 19.2.7
+
   packages/eslint-config:
     dependencies:
       '@eslint/js':

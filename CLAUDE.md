@@ -41,6 +41,12 @@ Shared logic packages (`tokens`, `api`) are the DRY home for cross-app code: des
 a small per-app `lib/api.ts` that supplies the env baseUrl). Apps that use them depend on
 `@lukasbriza/api` / `@lukasbriza/tokens` (`workspace:*`), so scaffold those packages first.
 
+**In this project the API package is `@lukasbriza/coffra-api`** (`packages/coffra-api`, from `package-api`, the
+contract of `apps/coffra-be`), not `@lukasbriza/api`: the template is a workspace of that name, and two workspaces of
+one name make turbo fail. An app scaffolded from `app-react`, `app-next` or `app-mobile` switches its dependency, its
+`lib/api.ts` import and its `CLAUDE.md` to `@lukasbriza/coffra-api` (see `packages/coffra-api/CLAUDE.md`). The other
+`package-*` generators have the same collision: give the copy a name of its own before `pnpm install`.
+
 - `templates/<type>/` holds the **canonical, real** project body (single source of
   truth). Generators copy it into `apps/`/`packages/` and post-process (rename, optional
   variants, drop per-workspace `CLAUDE.md`), then optionally run `pnpm install` + `lint:fix`.
