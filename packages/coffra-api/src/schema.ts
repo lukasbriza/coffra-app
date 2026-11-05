@@ -274,6 +274,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/me/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete the signed-in user and everything they own
+         * @description Deletes the accounts, categories, transactions and transfers of the user and the user, at once and for good. The access token keeps working until it expires but finds nothing, and the refresh token is refused. Afterwards the client drops both tokens and logs out at the identity provider (`POST /api/auth/logout`, then the browser goes to `endSessionUrl`); otherwise the next login signs in again without a password. The identity at the provider stays: logging in again creates a new, empty user.
+         */
+        post: operations["UsersController_deleteMe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -334,6 +354,13 @@ export interface components {
              * @example -12000.0000
              */
             net: string;
+        };
+        ConfirmDeletionDto: {
+            /**
+             * @description The email of the signed-in user, exactly as `GET /api/users/me` returns it (letter case included). Anything else is a 409 and deletes nothing.
+             * @example dev@coffra.local
+             */
+            confirm: string;
         };
         CreateAccountDto: {
             /**
@@ -1826,6 +1853,49 @@ export interface operations {
             };
             /** @description The access token is missing, invalid or expired, or its user no longer exists */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersController_deleteMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmDeletionDto"];
+            };
+        };
+        responses: {
+            /** @description The user and all their data are deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `confirm` is missing, empty, not a string or longer than 320 characters */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The access token is missing, invalid or expired, or its user no longer exists */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `confirm` is not the email of the user: nothing was deleted */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

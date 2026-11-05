@@ -46,6 +46,8 @@ export const SEED_DAYS = { income: '2026-01-10', expense: '2026-01-12', transfer
 /** What one user owns at the start of every spec, by id, and a valid access token of that user. */
 export type Persona = {
   userId: string
+  /** `a@coffra.test` or `b@coffra.test`: what confirms the deletion of the user. */
+  email: string
   token: string
   /** `main` (CZK, has every transaction), `savings` (CZK, receives the transfer), `euro` (EUR), `empty` (CZK, none). */
   accounts: { main: string; savings: string; euro: string; empty: string }
@@ -161,6 +163,7 @@ const seedPersona = async (
 
   return {
     userId: user.id,
+    email: user.email,
     token: await issueToken(user.id),
     accounts,
     categories,

@@ -107,6 +107,21 @@
         ],
         "type": "object"
       },
+      "ConfirmDeletionDto": {
+        "properties": {
+          "confirm": {
+            "description": "The email of the signed-in user, exactly as `GET /api/users/me` returns it (letter case included). Anything else is a 409 and deletes nothing.",
+            "example": "dev@coffra.local",
+            "maxLength": 320,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "type": "object"
+      },
       "CreateAccountDto": {
         "properties": {
           "currency": {
@@ -1905,6 +1920,41 @@
           }
         },
         "summary": "The user the access token was issued to",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/users/me/deletion": {
+      "post": {
+        "description": "Deletes the accounts, categories, transactions and transfers of the user and the user, at once and for good. The access token keeps working until it expires but finds nothing, and the refresh token is refused. Afterwards the client drops both tokens and logs out at the identity provider (`POST /api/auth/logout`, then the browser goes to `endSessionUrl`); otherwise the next login signs in again without a password. The identity at the provider stays: logging in again creates a new, empty user.",
+        "operationId": "UsersController_deleteMe",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmDeletionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The user and all their data are deleted"
+          },
+          "400": {
+            "description": "`confirm` is missing, empty, not a string or longer than 320 characters"
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired, or its user no longer exists"
+          },
+          "409": {
+            "description": "`confirm` is not the email of the user: nothing was deleted"
+          }
+        },
+        "summary": "Delete the signed-in user and everything they own",
         "tags": [
           "users"
         ]

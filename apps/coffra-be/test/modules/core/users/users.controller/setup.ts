@@ -13,11 +13,12 @@ import { configureApp } from '../../../../../src/app.setup'
 import { AuthTokensService } from '../../../../../src/modules/core/auth/auth-tokens.service'
 import { JwtAuthGuard } from '../../../../../src/modules/core/auth/jwt-auth.guard'
 import type { TokenPair } from '../../../../../src/modules/core/auth/types'
+import { UserDeletionService } from '../../../../../src/modules/core/users/user-deletion.service'
 import { UsersController } from '../../../../../src/modules/core/users/users.controller'
 import { UsersService } from '../../../../../src/modules/core/users/users.service'
 import { AuthSource, type User } from '../../../../../src/modules/prisma'
 
-// Shared by the use case specs of `UsersController` (one file per endpoint).
+// Shared by the use case specs of `UsersController` (one file per endpoint: `me`, `delete-me`).
 
 export const user: User = {
   id: '0b0f7f3e-3c55-4a43-9d33-6a0c1f7f4a11',
@@ -41,6 +42,7 @@ const values: Record<string, unknown> = {
  */
 export const useUsersController = () => {
   const findById = vi.fn<UsersService['findById']>()
+  const deleteUser = vi.fn<UserDeletionService['delete']>()
   let app: INestApplication
 
   const server = (): App => app.getHttpServer() as App
@@ -53,11 +55,19 @@ export const useUsersController = () => {
     return authorization === undefined ? call : call.set('Authorization', authorization)
   }
 
+  /** `POST /api/users/me/deletion` with a body, with or without a token. */
+  const deleteMe = (body: unknown, authorization?: string): request.Test => {
+    const call = request(server()).post('/api/users/me/deletion')
+    const authorized = authorization === undefined ? call : call.set('Authorization', authorization)
+    return authorized.send(body as object)
+  }
+
   beforeEach(async () => {
     vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {
       // keeps expected rejection warnings out of the test output
     })
     findById.mockReset().mockResolvedValue(user)
+    deleteUser.mockReset().mockResolvedValue()
 
     const moduleRef = await Test.createTestingModule({
       imports: [JwtModule.register({})],
@@ -65,6 +75,7 @@ export const useUsersController = () => {
       providers: [
         AuthTokensService,
         { provide: UsersService, useValue: { findById } },
+        { provide: UserDeletionService, useValue: { delete: deleteUser } },
         { provide: ConfigService, useValue: { get: (key: string) => values[key] } },
       ],
     }).compile()
@@ -80,5 +91,5 @@ export const useUsersController = () => {
     vi.restoreAllMocks()
   })
 
-  return { findById, server, session, me }
+  return { findById, deleteUser, server, session, me, deleteMe }
 }
