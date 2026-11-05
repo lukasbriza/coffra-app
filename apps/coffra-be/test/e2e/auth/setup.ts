@@ -14,12 +14,11 @@ import { withMemoryRateLimit, withoutRateLimit } from '../../modules/rate-limit/
 import { fakeRedis } from '../../modules/redis/fake-redis'
 import { CLIENT_ID, CLIENT_SECRET, FakeIdp, REDIRECT_URI } from '../support/fake-idp'
 import { InMemoryPrisma } from '../support/in-memory-prisma'
+import { authorize, type Browser, callback, startLogin } from '../support/oidc-login'
 
 // Shared by the e2e specs of the auth flow: the real `AppModule` (config validation, every module, the global
 // guard line of `main.ts`) against a fake identity provider on loopback and an in-memory user table. No Docker,
 // no `.env`, no fixed port.
-
-export type Browser = ReturnType<typeof request.agent>
 
 export const ACCESS_TTL_SECONDS = 900
 export const REFRESH_TTL_SECONDS = 2_592_000
@@ -55,39 +54,6 @@ const loadApp = async () => {
 
   return { AppModule, AuthTokensService, JwtAuthGuard, PrismaService, RedisService }
 }
-
-/** The `name=value` part of the login cookie in a `Set-Cookie` header, what a browser sends back. */
-export const checksCookiePair = (response: request.Response): string | undefined =>
-  ((response.headers['set-cookie'] ?? []) as unknown as string[])
-    .find((cookie) => cookie.startsWith('coffra_oidc_checks='))
-    ?.split(';', 1)[0]
-
-/** Claims of a JWT, without verifying anything. */
-export const claimsOf = (token: string): Record<string, unknown> =>
-  JSON.parse(Buffer.from(token.split('.', 2)[1] ?? '', 'base64url').toString('utf8')) as Record<string, unknown>
-
-/** Step 1 of a login, `GET /api/auth/login`: the URL the app sends the browser to and the cookie it sets. */
-const startLogin = async (as: Browser): Promise<{ authorizationUrl: string; checksCookie: string }> => {
-  const response = await as.get('/api/auth/login').expect(302)
-
-  return {
-    authorizationUrl: response.headers.location,
-    checksCookie: checksCookiePair(response) ?? '',
-  }
-}
-
-/** Step 2, the browser at the IdP: the callback URL it is redirected to, as the IdP built it. */
-const authorize = async (authorizationUrl: string): Promise<URL> => {
-  const response = await fetch(authorizationUrl, { redirect: 'manual' })
-  if (response.status !== 302) {
-    throw new Error(`The fake IdP rejected the authorization request: ${response.status} ${await response.text()}`)
-  }
-
-  return new URL(response.headers.get('location') ?? '')
-}
-
-/** Step 3, the browser follows the redirect: the redirect URI is the app under test, so only path and query matter. */
-const callback = (as: Browser, callbackUrl: URL): request.Test => as.get(`${callbackUrl.pathname}${callbackUrl.search}`)
 
 /**
  * Moves the clock forward, `Date` only (timers and sockets stay real). The fake IdP shares the process: what it

@@ -1,9 +1,10 @@
 import { PrismaPg } from '@prisma/adapter-pg'
 
+import type { PrismaService } from '../../../src/modules/prisma'
 import { PrismaClient } from '../../../src/modules/prisma/generated/client'
 
-// Shared by the global setup and the app of the integration specs: which database they may use, and a client on the
-// maintenance database to create and drop it.
+// Shared by the global setup and the apps of the integration specs: which database they may use, a client on the
+// maintenance database to create and drop it, and how a spec empties it.
 
 /** Every database the suite touches starts with this: the specs truncate all tables, so nothing else may match. */
 export const TEST_DATABASE_PREFIX = 'coffra_test'
@@ -46,6 +47,16 @@ export const testDatabase = (url: string | undefined): TestDatabase => {
   maintenance.pathname = '/postgres'
 
   return { url, name, maintenanceUrl: maintenance.toString(), host: parsed.host }
+}
+
+/**
+ * Deletes every row of every table of the app, so the next test starts from an empty database. Only ever called with
+ * the client of an app whose `DATABASE_URL` went through `testDatabase` first.
+ *
+ * @param prisma - the client of the app under test
+ */
+export const emptyTables = async (prisma: PrismaService): Promise<void> => {
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "Transaction", "Account", "Category", "User"')
 }
 
 /**
