@@ -170,7 +170,7 @@ Set by `transactions/accounts` (T14); categories, transactions and transfers fol
 - `openid-client` 6.x is ESM-only too and loads through `require(esm)`: that needs `"module": "node20"` in this app's `tsconfig.json` (otherwise TS1479) and Node >= 22.12. See ADR 0008.
 - `OIDC_ISSUER_URL` over plain `http:` works outside production only (dev Keycloak). A production start with it fails env validation, so `pnpm start` (`NODE_ENV=production`) needs an `https:` issuer.
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` and `AUTH_CHECKS_SECRET` must all differ (env validation enforces it), so one kind of signed value is never accepted as another. In production `OIDC_REDIRECT_URI` must be `https:` too (the login cookie is `Secure`).
-- Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`; `pnpm db:seed` fills the dev database with demo data (see Demo data); `pnpm openapi:export --out <file>` writes the OpenAPI document (see OpenAPI export); `pnpm test:integration` needs Postgres and Redis (`pnpm infra:up`); `pnpm test:image` needs Docker, the image (`pnpm image:build`), Postgres and Redis.
+- Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`; `pnpm db:seed` fills the dev database with demo data (see Demo data); `pnpm openapi:export --out <file>` writes the OpenAPI document (see OpenAPI export); `pnpm test:integration` needs Postgres and Redis (`pnpm infra:up`); `pnpm test:image` needs Docker, the image (`pnpm image:build`), Postgres and Redis. CI runs all of them (see CI).
 
 ## Dev environment (Postgres + Keycloak)
 
@@ -211,6 +211,23 @@ pnpm test:image      # the image against the dev Postgres and Redis (needs Docke
 - **The `HEALTHCHECK` runs `node` against `GET /api/health`** (503 when the database is down). Docker and Portainer use it, k3s ignores it. The main process is `node build/main`, so Node is PID 1 and gets SIGTERM; without `enableShutdownHooks` in `configureApp` the container would be killed after the grace period.
 - **The production dependencies come from `pnpm deploy`** after the dependencies of the workspace root are dropped from the manifest (pnpm adds them to every install otherwise; 272 packages instead of 969). A new production dependency needs nothing in the Dockerfile.
 - **Image suite** (`test/image/`, config `test/image/vitest.config.mjs`, not part of `pnpm test`): the global setup creates `coffra_test_image` on the server of `TEST_DATABASE_URL`, runs the migrations with the image itself and removes every container labelled `coffra-image-test` at the start and the end. `IMAGE` names another image than `coffra-be:local`. A new required variable in `env.validation.ts` needs a value in `productionEnvironment` (`test/image/support/environment.ts`) as well. The linter rewrites `http://` to `https://` in a string (except `localhost`): a case about plain http uses `localhost`.
+- **Dockerfiles are LF in every checkout** (root `.gitattributes`): a CR at the end of a heredoc line reaches the shell (`set -e\r`) and the build fails.
+
+## CI
+
+`.github/workflows/ci.yml` (ADR 0030) on every pull request to `master`, every push to it and on demand. Three jobs, each with its own checkout and install; nothing is published and no secret is used.
+
+| Job           | Runs                                                                                                                                                                                  | Services        |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `check`       | builds `@lukasbriza/prettier-config`, then `turbo run lint`, `ts`, `test`, `build` with `--filter=@lukasbriza/coffra-be... --filter=@lukasbriza/coffra-api...`, then `format` of both | none            |
+| `integration` | `pnpm --filter @lukasbriza/coffra-be test:integration`                                                                                                                                | Postgres, Redis |
+| `image`       | `image:build`, install, `test:image`                                                                                                                                                  | Postgres, Redis |
+
+- **`check` checks out with `core.autocrlf true`**: `.editorconfig` asks for CRLF, Prettier (through ESLint) follows it, the repository stores LF. On an LF checkout every file fails the lint, so the job verifies CRLF first. The other jobs keep LF.
+- **The suites run through pnpm, not turbo:** turbo's strict environment mode drops the `TEST_*` variables. A new variable or service a suite needs goes into the workflow too (`env` / `services` of `integration` and `image`).
+- **The templates are installed but not checked** (a filtered `pnpm install` installs every workspace anyway).
+- **A job reproduced locally:** `check` is the steps of the table from the repository root; `integration` and `image` are `pnpm test:integration` and `pnpm image:build && pnpm test:image` here with `pnpm infra:up`.
+- Actions are pinned to a full commit hash with the version in a comment; an update changes both by hand. Required checks on `master` are a repository setting.
 
 ## HTTP hardening
 

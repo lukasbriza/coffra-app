@@ -65,3 +65,4 @@ and mark the old one `Superseded by NNNN`.
 | [0027](./0027-swagger-off-in-production.md)          | Swagger UI off in production by default                           | Accepted |
 | [0028](./0028-openapi-export-and-api-contract.md)    | OpenAPI export compiled with tsc, contract in the API package     | Accepted |
 | [0029](./0029-user-deletion.md)                      | Users delete their own account, domains erase data through a port | Accepted |
+| [0030](./0030-continuous-integration.md)             | CI: three jobs, the project's own packages                        | Accepted |
