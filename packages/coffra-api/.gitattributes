@@ -1,0 +1,4 @@
+# The schemas are generated with \n line endings and checked byte by byte (`pnpm test` here and in coffra-be).
+# Keep them LF in the working copy on every system, whatever `core.autocrlf` says.
+src/schema*.json text eol=lf
+src/schema*.ts text eol=lf

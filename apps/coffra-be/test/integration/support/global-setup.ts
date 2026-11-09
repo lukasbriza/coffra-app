@@ -3,35 +3,10 @@ import path from 'node:path'
 
 import type { TestProject } from 'vitest/node'
 
-import { connect, type TestDatabase, testDatabase } from './test-database'
+import { maintain, type TestDatabase, testDatabase } from './test-database'
 
 // Runs once per `pnpm test:integration`, before any spec file: a fresh test database with every migration applied,
 // dropped again at the end. A run that crashed leaves its database behind; the next one starts by dropping it.
-
-/**
- * Runs one statement on the maintenance database.
- *
- * @param database - the test database, whose server is used
- * @param statement - SQL without parameters; the database name in it was checked by `testDatabase`
- * @throws Error naming the server when it cannot be reached
- */
-const maintain = async (database: TestDatabase, statement: string): Promise<void> => {
-  const client = connect(database.maintenanceUrl)
-
-  try {
-    await client.$executeRawUnsafe(statement)
-  } catch (error) {
-    // Prisma wraps the cause in lines about the invocation: its last line is the reason.
-    const message = error instanceof Error ? error.message : String(error)
-    const reason = message.trim().split('\n').at(-1) ?? message
-    throw new Error(
-      `The integration specs could not prepare their database on ${database.host}: ${reason.trim()}. ` +
-        'Is Postgres running? Start it with `pnpm infra:up`.',
-    )
-  } finally {
-    await client.$disconnect()
-  }
-}
 
 /**
  * Applies the migrations of the app to the test database, as a deploy does.

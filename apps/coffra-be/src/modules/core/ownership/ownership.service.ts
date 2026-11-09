@@ -36,6 +36,20 @@ export class OwnershipService {
   }
 
   /**
+   * Builds the owner whose data belong to one user alone, outside a request.
+   *
+   * The only place an owner is made without `@CurrentOwner()`: deleting a user erases the data of this owner. With
+   * shared workspaces it becomes the personal workspace of the user; what happens to the shared ones is a decision of
+   * its own then.
+   *
+   * @param userId - id of the user (`User.id`)
+   * @returns the owner of the data of that user
+   */
+  ownerOf(userId: string): Owner {
+    return { userId }
+  }
+
+  /**
    * Returns the row a scoped query found, or throws the 404 of the resource.
    *
    * A scoped query never finds a row of another owner, so "does not exist" and "is not yours" give the same answer and

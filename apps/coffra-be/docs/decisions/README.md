@@ -58,3 +58,11 @@ and mark the old one `Superseded by NNNN`.
 | [0020](./0020-transaction-totals.md)                 | Transaction totals: one service, rows folded per currency         | Accepted |
 | [0021](./0021-dashboard.md)                          | Dashboard: feature of transactions, windows per currency          | Accepted |
 | [0022](./0022-dashboard-trend.md)                    | Dashboard trend: totals by day, folded into months                | Accepted |
+| [0023](./0023-container-image.md)                    | Container image: shared Dockerfile, migrations as a command       | Accepted |
+| [0024](./0024-seed-and-scripts.md)                   | Developer scripts with tsx, demo seed replaces one user's data    | Accepted |
+| [0025](./0025-http-hardening.md)                     | HTTP hardening: strict CSP, CORS allow-list, rate limit buckets   | Accepted |
+| [0026](./0026-rate-limit-in-redis.md)                | Rate limit counters in Redis, 503 while Redis is away             | Accepted |
+| [0027](./0027-swagger-off-in-production.md)          | Swagger UI off in production by default                           | Accepted |
+| [0028](./0028-openapi-export-and-api-contract.md)    | OpenAPI export compiled with tsc, contract in the API package     | Accepted |
+| [0029](./0029-user-deletion.md)                      | Users delete their own account, domains erase data through a port | Accepted |
+| [0030](./0030-continuous-integration.md)             | CI: three jobs, the project's own packages                        | Accepted |

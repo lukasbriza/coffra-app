@@ -60,8 +60,9 @@ export class AuthService {
   /**
    * Swaps a refresh token for a new pair.
    *
-   * The new refresh token ends when the old one would have, and the user must still exist: deleting the `User` is the
-   * only way to end a session early, because the tokens are stateless.
+   * The new refresh token ends when the old one would have, and the user must still exist: the tokens are stateless, so
+   * a session ends early only when its user deletes their account (all their data with it; the identity provider may
+   * log them in again as a new user) or when `JWT_REFRESH_SECRET` is rotated, which ends every session.
    *
    * @param refreshToken - the refresh token sent by the client
    * @returns a new access and refresh token

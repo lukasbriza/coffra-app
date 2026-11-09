@@ -1,7 +1,7 @@
 import { expect } from 'vitest'
 
+import type { Client } from './client'
 import type { CurrencyBody, DashboardBody } from './dashboard-sql'
-import type { Client } from './use-integration-app'
 
 // What every spec of the dashboard asks the same way: fetch it, and check that the figures of one answer add up.
 

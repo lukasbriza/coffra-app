@@ -15,7 +15,7 @@ not a rewrite of every query.
 - `Transaction` has **no** `userId`; its owner is `account.userId`.
 - The ownership check lives in one place, the ownership layer in `modules/core`, not in scattered `WHERE userId = …` clauses.
 - Delete behaviour:
-  - deleting a user cascades to their accounts and categories;
+  - deleting a user cascades to their accounts and categories; _Correction: only while the user has no transaction, the cascade to the accounts stops at the `Restrict` of `Transaction.account`. A user is deleted with all their data as [0029](./0029-user-deletion.md) decides._
   - an account that still has transactions cannot be deleted (`Restrict`, the API should answer 409);
   - deleting a category keeps its transactions and sets `categoryId` to null (`SetNull`). _Changed by [0014](./0014-category-names-and-delete.md): a category that still has transactions cannot be deleted (`Restrict`, 409)._
 

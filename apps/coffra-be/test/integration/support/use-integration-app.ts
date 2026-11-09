@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { type INestApplication, Logger, type ModuleMetadata } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { Test } from '@nestjs/testing'
-import request from 'supertest'
+import type request from 'supertest'
 import type { App } from 'supertest/types'
 import { afterAll, afterEach, beforeAll, beforeEach, expect, type MockInstance, vi } from 'vitest'
 
@@ -13,22 +13,16 @@ import { AppModule } from '../../../src/app.module'
 import { configureApp } from '../../../src/app.setup'
 import { AuthTokensService, JwtAuthGuard } from '../../../src/modules/core'
 import { PrismaService } from '../../../src/modules/prisma'
+import { withoutRateLimit } from '../../modules/rate-limit/rate-limit-overrides'
 
+import { type Client, createClient } from './client'
 import { type Snapshot, takeSnapshot } from './snapshot'
-import { testDatabase } from './test-database'
+import { emptyTables, testDatabase } from './test-database'
 import { type Persona, seedWorld, type World } from './world'
 
 // Shared by every integration spec: the real `AppModule` (config validation, every module, the global guard line of
 // `main.ts`) with the real `PrismaService` on the test database. Nothing in the chain that decides whose rows a
 // request sees is replaced. Only the login is skipped: the access tokens come from the real `AuthTokensService`.
-
-/** Requests to the app under test, with or without a token. */
-export type Client = {
-  get: (path: string) => request.Test
-  post: (path: string, body?: object) => request.Test
-  patch: (path: string, body: object) => request.Test
-  delete: (path: string) => request.Test
-}
 
 /** Extra modules for the testing module (e.g. `DiscoveryModule` to list the routes). */
 type Options = { imports?: ModuleMetadata['imports'] }
@@ -52,17 +46,7 @@ export const useIntegrationApp = ({ imports = [] }: Options = {}) => {
 
   const server = (): App => app.getHttpServer() as App
 
-  const client = (authorization?: string): Client => {
-    const authorize = (test: request.Test): request.Test =>
-      authorization === undefined ? test : test.set('Authorization', authorization)
-
-    return {
-      get: (path) => authorize(request(server()).get(path)),
-      post: (path, body = {}) => authorize(request(server()).post(path)).send(body),
-      patch: (path, body) => authorize(request(server()).patch(path)).send(body),
-      delete: (path) => authorize(request(server()).delete(path)),
-    }
-  }
+  const client = (authorization?: string): Client => createClient(server, authorization)
 
   const issueToken = async (userId: string): Promise<string> => {
     const { accessToken } = await tokens.issue(userId)
@@ -117,7 +101,8 @@ export const useIntegrationApp = ({ imports = [] }: Options = {}) => {
     // eslint-disable-next-line turbo/no-undeclared-env-vars
     testDatabase(process.env.DATABASE_URL)
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule, ...imports] }).compile()
+    // Without the rate limit: hundreds of requests from one address would meet it. The limit has specs of its own.
+    const moduleRef = await withoutRateLimit(Test.createTestingModule({ imports: [AppModule, ...imports] })).compile()
 
     app = moduleRef.createNestApplication({ logger: false })
     configureApp(app)
@@ -139,7 +124,7 @@ export const useIntegrationApp = ({ imports = [] }: Options = {}) => {
       // collected and asserted in `afterEach`
     })
 
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE "Transaction", "Account", "Category", "User"')
+    await emptyTables(prisma)
     world = await seedWorld(prisma, issueToken)
   })
 

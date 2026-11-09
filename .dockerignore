@@ -1,12 +1,32 @@
-test
-node_modules
+# Build context of the images in docker/ (context = repository root).
+# Keep it small and keep secrets out: nothing here may reach a layer.
+
+# Dependencies and build output
 **/node_modules
-.turbo
-.gitignore
-_avast_
-.git
-.next
-dist
-*.md
+**/build
+**/dist
+**/.next
+**/.turbo
+**/*.tsbuildinfo
+**/.eslintcache
+**/coverage
 out
-modules/prisma/generate/*
+
+# Generated code: rebuilt inside the image (`prisma generate`)
+**/src/modules/prisma/generated
+
+# Secrets and local configuration (the example file stays)
+**/.env*
+!**/.env.example
+**/*.pem
+_avast_
+
+# Not needed to build or run (`.gitignore` stays: `turbo prune` filters by it)
+**/test
+**/*.md
+.git
+.husky
+.claude
+.vscode
+.fallow
+graphify-out
