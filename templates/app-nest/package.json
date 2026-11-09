@@ -14,7 +14,7 @@
     "format:fix": "pnpm run format --write",
     "lint": "eslint --cache .",
     "lint:fix": "pnpm run lint --fix",
-    "start": "NODE_ENV=production node build/main",
+    "start": "dotenv -v NODE_ENV=production -- node build/main",
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
     "test:watch": "vitest",

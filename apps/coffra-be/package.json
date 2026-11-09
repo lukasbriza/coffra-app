@@ -25,7 +25,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "start": "NODE_ENV=production node build/main",
+    "start": "dotenv -v NODE_ENV=production -- node build/main",
     "test": "vitest run",
     "test:cov": "vitest run --coverage --testTimeout=30000 --hookTimeout=30000",
     "test:e2e": "vitest run --project e2e",
