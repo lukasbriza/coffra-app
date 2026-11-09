@@ -37,7 +37,8 @@ export default defineConfig({
     passWithNoTests: true,
     // The HTTP and e2e specs boot a Nest app each and open many short-lived loopback connections. With the default
     // (one worker per core but one) connection setup on some Windows machines stalls in steps of 10 s and the specs
-    // run into the 5 s test and 10 s hook timeouts; few workers keep the run stable.
+    // run into the 5 s test and 10 s hook timeouts; few workers keep the run stable. `pnpm test:cov` raises both
+    // timeouts to 30 s: the instrumented run is two to three times slower, and one stall would fail a test there.
     maxWorkers: 2,
     env: TEST_ENV,
     // The e2e specs are the heaviest on the network (a whole login against the fake IdP per test), so they run as a
