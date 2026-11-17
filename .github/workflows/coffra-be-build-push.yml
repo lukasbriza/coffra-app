@@ -1,0 +1,75 @@
+# Builds and pushes the coffra-be image, bumps the tag in the chart values, commits to
+# master, then syncs ArgoCD. The ArgoCD Application has no automated sync, so nothing
+# deploys except through this workflow's sync step.
+name: Build and push coffra-be image
+
+on:
+  push:
+    tags:
+      - 'coffra-be-v*'
+  workflow_dispatch: {}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Get version from tag
+        id: vars
+        run: echo "version=${GITHUB_REF_NAME#coffra-be-v}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/node/prisma/Dockerfile
+          build-args: |
+            APP=coffra-be
+            PORT=3000
+          push: true
+          tags: ghcr.io/lukasbriza/coffra-be:coffra-be-v${{ steps.vars.outputs.version }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Bump image tag in Helm values
+        run: |
+          sed -i "s/tag: coffra-be-v.*/tag: coffra-be-v${{ steps.vars.outputs.version }}/" apps/coffra-be/k8s/chart/values.yaml
+
+      - name: Commit and push updated values
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # A tag checkout is a detached HEAD. Switch to the branch ArgoCD tracks.
+          git fetch origin master
+          git checkout master
+          git add apps/coffra-be/k8s/chart/values.yaml
+          git diff --cached --quiet && echo "No changes to commit" || git commit -m "chore: bump coffra-be image to v${{ steps.vars.outputs.version }}"
+          for i in 1 2 3; do
+            git push origin master && break
+            echo "push rejected, rebasing and retrying ($i/3)"
+            git fetch origin master
+            git rebase origin/master
+            sleep 2
+          done
+
+      - name: Install argocd CLI
+        run: |
+          curl -sSL -o /usr/local/bin/argocd \
+            https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x /usr/local/bin/argocd
+
+      - name: Sync via ArgoCD
+        env:
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+        run: |
+          argocd app sync coffra-be --server argocd.lukasbriza.eu --grpc-web
+          argocd app wait coffra-be --server argocd.lukasbriza.eu --grpc-web --health

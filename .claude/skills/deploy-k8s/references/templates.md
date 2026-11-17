@@ -1,14 +1,18 @@
 # Templates
 
-Replace `<name>`, `<port>`, `<health-path>`, `<domain>`, `<repo>`. Adapt to the app, do not
-paste blindly. Paths are relative to `apps/<name>/k8s/chart/`.
+Replace `<name>`, `<port>`, `<health-path>`, `<domain>`, `<infisical-project-id>` (ask the
+user), and the cluster placeholders
+(`<registry>`, `<infisical-auth>`, `<infisical-auth-ns>`, `<infisical-env>`,
+`<argocd-server>`, `<repo-url>`, `<branch>`) with values from the Cluster facts table in
+`SKILL.md`. Adapt to the app, do not paste blindly. Chart paths are relative to
+`apps/<name>/k8s/chart/`.
 
 ## Chart.yaml
 
 ```yaml
 apiVersion: v2
 name: <name>
-description: <name> for homeport
+description: <one-line description of the app>
 type: application
 version: 0.1.0
 appVersion: "latest"
@@ -18,7 +22,7 @@ appVersion: "latest"
 
 ```yaml
 image:
-  repository: ghcr.io/lukasbriza/<name>
+  repository: <registry>/<name>
   # Bumped by .github/workflows/<name>-build-push.yml on every <name>-v* tag.
   tag: <name>-v0.1.0
 
@@ -46,13 +50,23 @@ env: {}
 infisical:
   enabled: false
   authRef:
-    name: homeport-infisical-auth
-    namespace: infisical-system
+    name: <infisical-auth>
+    namespace: <infisical-auth-ns>
   projectId: ""
-  environmentSlug: prod
+  environmentSlug: <infisical-env>
   secretPath: /<name>
   # Kubernetes env var name -> Infisical secret key.
   secrets: {}
+```
+
+For an upstream image, pin the upstream version instead (never `latest`, a sync must
+be reproducible):
+
+```yaml
+image:
+  repository: <upstream image, e.g. docker.io/vendor/app>
+  # Bumped by hand; .github/workflows/<name>-deploy.yml only syncs.
+  tag: "<upstream version>"
 ```
 
 ## values-prod.example.yaml (copy to values-prod.yaml, committed, no secrets)
@@ -63,7 +77,10 @@ ingress:
   host: "<domain>"
 infisical:
   enabled: true
-  projectId: "<Homeport project id>"
+  projectId: "<infisical-project-id>"
+# Scale to zero (see SKILL.md): uncomment to keep every workload stopped. PVCs remain.
+# replicas: 0
+# <component>.replicas: 0 for each database or cache the chart ships, e.g. postgres.replicas: 0
 ```
 
 ## templates/deployment.yaml
@@ -124,7 +141,8 @@ spec:
 ```
 
 Set `mountPath` to the directory the app writes to. If `env` is also set via `envFrom`
-and `env`, make sure no key appears in both.
+and `env`, make sure no key appears in both. Without an HTTP health endpoint, or when the
+app rejects the pod IP as `Host`, use `tcpSocket: { port: ... }` probes.
 
 ## templates/service.yaml
 
@@ -225,11 +243,135 @@ spec:
 
 Fill `infisical.secrets` in `values.yaml`, e.g. `DATABASE_URL: DATABASE_URL`.
 
-## .github/workflows/<name>-build-push.yml
+## Scale to zero on demand (KEDA HTTP Add-on)
+
+Only when the user chose on-demand scale to zero (see SKILL.md). Requires `ingress.enabled`
+and `ingress.host`. Resource names use `{{ .Release.Name }}`.
+
+### values.yaml (append)
+
+```yaml
+# Needs KEDA and the HTTP Add-on on the cluster. Keep false for the first sync,
+# set true in values-prod.yaml once the app works.
+scaleToZero:
+  enabled: false
+  minReplicas: 0
+  maxReplicas: 1
+  # Seconds without matching requests before scaling back down to 0.
+  cooldownPeriod: 300
+  # Requests per second, averaged over `window`, that justify scaling up.
+  targetRequestRate: 5
+  window: 1m
+```
+
+### templates/ingress.yaml (backend branch)
+
+Replace the `backend.service` block of the Ingress template with:
+
+```yaml
+              service:
+                {{- if .Values.scaleToZero.enabled }}
+                name: {{ .Release.Name }}-keda-proxy
+                port:
+                  number: 8080
+                {{- else }}
+                name: {{ .Release.Name }}
+                port:
+                  number: {{ .Values.service.port }}
+                {{- end }}
+```
+
+### templates/keda-proxy.yaml
+
+```yaml
+{{- if .Values.scaleToZero.enabled }}
+# An Ingress backend cannot reference a Service in another namespace. This ExternalName
+# Service resolves to the KEDA HTTP Add-on interceptor proxy.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-keda-proxy
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ExternalName
+  externalName: keda-add-ons-http-interceptor-proxy.keda.svc.cluster.local
+  ports:
+    - port: 8080
+{{- end }}
+```
+
+### templates/scaletozero.yaml
+
+```yaml
+{{- if .Values.scaleToZero.enabled }}
+# Tells the interceptor which requests belong to this app and which metric to report.
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  target:
+    service: {{ .Release.Name }}
+    port: {{ .Values.service.port }}
+  # A rule without `paths` matches only the literal root. The explicit "/" prefix
+  # covers every path.
+  rules:
+    - hosts: [{{ .Values.ingress.host | quote }}]
+      paths:
+        - value: /
+  scalingMetric:
+    requestRate:
+      targetValue: {{ .Values.scaleToZero.targetRequestRate }}
+      window: {{ .Values.scaleToZero.window }}
+      granularity: 1s
+  # Shown while the pod starts. The ConfigMap must exist in this namespace.
+  coldStart:
+    placeholder:
+      response:
+        bodyFromConfigMap:
+          name: coldstart-page
+          key: index.html
+        headers:
+          Refresh: "3"
+---
+# Scales the app's Deployment (same name as the release) between 0 and maxReplicas
+# by the request rate the interceptor reports.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  scaleTargetRef:
+    name: {{ .Release.Name }}
+  minReplicaCount: {{ .Values.scaleToZero.minReplicas }}
+  maxReplicaCount: {{ .Values.scaleToZero.maxReplicas }}
+  cooldownPeriod: {{ .Values.scaleToZero.cooldownPeriod }}
+  triggers:
+    - type: external-push
+      metadata:
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+        interceptorRoute: {{ .Release.Name }}
+{{- end }}
+```
+
+### values-prod.yaml (after the first sync works)
+
+```yaml
+scaleToZero:
+  enabled: true
+```
+
+## .github/workflows/<name>-build-push.yml (turbo app or local Dockerfile)
+
+The block below is for a turbo app: context `.`, a Dockerfile from `docker/`, build args
+from that Dockerfile's header. For a local Dockerfile use `context: apps/<name>`,
+`file: apps/<name>/Dockerfile` and drop `build-args`.
 
 ```yaml
 # Builds and pushes the <name> image, bumps the tag in the chart values, commits to
-# master, then syncs ArgoCD. The ArgoCD Application has no automated sync, so nothing
+# <branch>, then syncs ArgoCD. The ArgoCD Application has no automated sync, so nothing
 # deploys except through this workflow's sync step.
 name: Build and push <name> image
 
@@ -262,12 +404,12 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/node/Dockerfile
+          file: docker/<node|nextjs|node/prisma>/Dockerfile
           build-args: |
             APP=<name>
             PORT=<port>
           push: true
-          tags: ghcr.io/lukasbriza/<name>:<name>-v${{ steps.vars.outputs.version }}
+          tags: <registry>/<name>:<name>-v${{ steps.vars.outputs.version }}
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
 
       - name: Bump image tag in Helm values
@@ -279,15 +421,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # A tag checkout is a detached HEAD. Switch to the branch ArgoCD tracks.
-          git fetch origin master
-          git checkout master
+          git fetch origin <branch>
+          git checkout <branch>
           git add apps/<name>/k8s/chart/values.yaml
           git diff --cached --quiet && echo "No changes to commit" || git commit -m "chore: bump <name> image to v${{ steps.vars.outputs.version }}"
           for i in 1 2 3; do
-            git push origin master && break
+            git push origin <branch> && break
             echo "push rejected, rebasing and retrying ($i/3)"
-            git fetch origin master
-            git rebase origin/master
+            git fetch origin <branch>
+            git rebase origin/<branch>
             sleep 2
           done
 
@@ -301,20 +443,49 @@ jobs:
         env:
           ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
         run: |
-          argocd app sync <name> --server argocd.lukasbriza.eu --grpc-web
-          argocd app wait <name> --server argocd.lukasbriza.eu --grpc-web --health
+          argocd app sync <name> --server <argocd-server> --grpc-web
+          argocd app wait <name> --server <argocd-server> --grpc-web --health
 ```
 
-If the repo's default branch is not `master`, tell the user before changing it: the
-ArgoCD Application tracks the same branch.
-
-## ArgoCD Application (print for the user; they add it to the infra repo)
-
-File name in the infra repo: `applications/<name>.yaml`
+## .github/workflows/<name>-deploy.yml (upstream image)
 
 ```yaml
-# ArgoCD Application for <name> (<repo> repo). Deploys only through the release tag
-# (<name>-v*), whose workflow builds the image, bumps values.yaml and runs `argocd app sync`.
+# Syncs <name> through ArgoCD on a <name>-v* tag. The chart runs an upstream image
+# unmodified, so there is no build and the tag carries no version: it is only the
+# deploy signal. The ArgoCD Application has no automated sync.
+name: Deploy <name>
+
+on:
+  push:
+    tags:
+      - '<name>-v*'
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install argocd CLI
+        run: |
+          curl -sSL -o /usr/local/bin/argocd \
+            https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x /usr/local/bin/argocd
+
+      - name: Sync via ArgoCD
+        env:
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+        run: |
+          argocd app sync <name> --server <argocd-server> --grpc-web
+          argocd app wait <name> --server <argocd-server> --grpc-web --health
+```
+
+## ArgoCD Application (print for the user; they add it to the GitOps repo)
+
+File: `<name>.yaml` next to the other Application manifests in the GitOps repo.
+
+```yaml
+# ArgoCD Application for <name>. Deploys only through the <name>-v* tag, whose workflow
+# ends with `argocd app sync`; automated sync stays off.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -323,8 +494,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/lukasbriza/<repo>.git
-    targetRevision: master
+    repoURL: <repo-url>
+    targetRevision: <branch>
     path: apps/<name>/k8s/chart
     helm:
       valueFiles:
@@ -338,4 +509,4 @@ spec:
       - CreateNamespace=true
 ```
 
-After the user pushes it, the cluster's root Application picks it up. No `kubectl apply`.
+With app-of-apps (see Cluster facts), pushing the file is enough. No `kubectl apply`.

@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-postgres
+  namespace: {{ .Release.Namespace }}
+spec:
+  clusterIP: None
+  selector:
+    app: {{ .Release.Name }}-postgres
+  ports:
+    - name: postgres
+      port: {{ .Values.postgres.port }}
+      targetPort: {{ .Values.postgres.port }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-postgres
+  namespace: {{ .Release.Namespace }}
+spec:
+  serviceName: {{ .Release.Name }}-postgres
+  replicas: {{ .Values.postgres.replicas }}
+  # The volume outlives the StatefulSet and `helm uninstall` (local-path reclaims with Delete).
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-postgres
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-postgres
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          ports:
+            - containerPort: {{ .Values.postgres.port }}
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            # Applied by initdb on an empty volume only; a later change needs ALTER USER as well.
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: POSTGRES_PASSWORD
+            # A subdirectory of the mount, so initdb finds an empty directory.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.postgres.user | quote }}, "-d", {{ .Values.postgres.database | quote }}]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.postgres.storage.storageClassName }}
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage.size }}

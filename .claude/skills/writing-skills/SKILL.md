@@ -111,6 +111,7 @@ Rules:
 - Long narrative explanations — prefer tables, code blocks, bullets
 - Outdated patterns — verify against current code before writing
 - Information the agent can discover by reading the file (e.g. function signatures that are obvious from the source)
+- Paths into a specific scaffolded project or another repository (`<repo>/apps/<app>/...`) — template skills ship to every project, where those files do not exist. Inline the content (templates, snippets) in the skill or its `references/` instead
 
 ---
 

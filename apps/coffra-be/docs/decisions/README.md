@@ -66,3 +66,4 @@ and mark the old one `Superseded by NNNN`.
 | [0028](./0028-openapi-export-and-api-contract.md)    | OpenAPI export compiled with tsc, contract in the API package     | Accepted |
 | [0029](./0029-user-deletion.md)                      | Users delete their own account, domains erase data through a port | Accepted |
 | [0030](./0030-continuous-integration.md)             | CI: three jobs, the project's own packages                        | Accepted |
+| [0031](./0031-deployment-to-kubernetes.md)           | Kubernetes: a closed Helm chart, migrations in an init container  | Accepted |
