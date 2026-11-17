@@ -8,8 +8,8 @@
 #     keycloak/coffra-realm.json is the single source of truth and is re-imported on
 #     every container (re)creation.
 #   - Redis holds the rate limit counters only (REDIS_URL), shared by the replicas of the app; nothing in it is worth
-#     keeping, so it writes nothing to disk. `pnpm dev` does not need it (without REDIS_URL the counters are in the
-#     memory of the process); the integration specs of the rate limit do.
+#     keeping, so it writes nothing to disk. The app needs it like the database (REDIS_URL is required), so
+#     `pnpm dev`, the integration specs and the image specs need it too.
 name: coffra-dev
 
 services:

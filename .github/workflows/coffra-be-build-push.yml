@@ -52,7 +52,11 @@ jobs:
           git fetch origin master
           git checkout master
           git add apps/coffra-be/k8s/chart/values.yaml
-          git diff --cached --quiet && echo "No changes to commit" || git commit -m "chore: bump coffra-be image to v${{ steps.vars.outputs.version }}"
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: bump coffra-be image to v${{ steps.vars.outputs.version }}"
+          fi
           for i in 1 2 3; do
             git push origin master && break
             echo "push rejected, rebasing and retrying ($i/3)"

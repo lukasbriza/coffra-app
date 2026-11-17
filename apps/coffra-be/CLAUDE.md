@@ -3,6 +3,10 @@
 Per-app context. Inherits monorepo conventions from the root `CLAUDE.md`; this file
 covers only what is specific to a NestJS app.
 
+How to run and configure the app (the dev services, the scripts, the test suites, every environment variable, the
+production checklist, the identity provider, secret rotation) is in [README.md](./README.md). This file does not
+repeat it; it keeps what you need to change the code, and the deployment to Kubernetes (section "Deployment (k8s)").
+
 ## Stack
 
 - NestJS 11 (Express 5 platform), TypeScript (CommonJS output via `nest build` → `build/`).
@@ -142,7 +146,7 @@ Set by `transactions/accounts` (T14); categories, transactions and transfers fol
 - **Tests mirror `src/`**: module tests in `test/modules/<module>/…` (plus the feature folder when the module has one, e.g. `test/modules/core/auth/`), util tests in `test/utils/`, tests of the root setup files (`app.setup.ts`, `swagger.setup.ts`) in `test/app.setup/`, one spec per use case.
 - **One spec file per use case** for a controller, service or provider: a folder named after the source file (`auth.service.ts` → `test/modules/core/auth/auth.service/`) holds `<use-case>.spec.ts` in kebab-case (`complete-login.spec.ts`, `refresh.spec.ts`; a controller by endpoint: `login.spec.ts`, `callback.spec.ts`), `dependency-injection.spec.ts` for the `@Inject` check, and a `setup.ts` with the fixtures and a `use<Subject>()` function that registers the `beforeEach`/`afterEach` of the block it is called in and returns the mocks. Helpers shared by several folders sit next to them (`auth/use-quiet-warnings.ts`). A small file with one subject and one use case stays a plain `<subject>.spec.ts` (`env.validation.spec.ts`, a util). `setup.ts` and the helpers are not `*.spec.ts`, so vitest does not run them, and `eslint.config.mjs` allows devDependencies in all of `test/`.
 - A spec that mocks a module (`vi.mock('openid-client', …)`) repeats the `vi.mock` call in every file: it is hoisted per file and cannot live in `setup.ts`.
-- **Specs need no `.env`.** `vitest.config.mjs` (`test.env`) sets a complete dummy environment for the whole run, because importing anything from `src/modules/config` validates the environment at once. `process.env` wins over a developer's `.env`, so the run is the same on every machine and in CI. A new variable in `env.validation.ts`, required or not, gets a value there too, and in `EXPORT_ENV` (`scripts/openapi/constants.ts`: `pnpm ts` fails without it). A spec that needs other values stubs them (`vi.stubEnv`) before the import.
+- **Specs need no `.env`.** `vitest.config.mjs` (`test.env`) sets a complete dummy environment for the whole run, because importing anything from `src/modules/config` validates the environment at once. `process.env` wins over a developer's `.env`, so the run is the same on every machine and in CI. A new variable in `env.validation.ts`, required or not, gets a value there too, in `EXPORT_ENV` (`scripts/openapi/constants.ts`: `pnpm ts` fails without it), a row in the table of README → Configuration and a line in `.env.example` (`test/docs/` fails without them). A spec that needs other values stubs them (`vi.stubEnv`) before the import.
 - **A bootstrap of the whole `AppModule` replaces the rate limit** with `withoutRateLimit(builder)` and, in `pnpm test`, Redis with `fakeRedis()`, or the suite meets a `429` or needs Docker: see HTTP hardening → Specs.
 - **The linter rewrites `http://` to `https://` in a string literal** (not for `localhost`), also in specs: a case about plain http is written with `localhost` or built (`ORIGIN.replace('https:', 'http:')`), or it silently tests the https one.
 - **Two vitest projects, few workers.** `unit` (everything outside `test/e2e/`, 2 workers) runs first, then `e2e` (`test/e2e/**`, one file at a time). The specs open many short-lived loopback connections (supertest, the fake IdP); with more parallelism, connection setup on some Windows machines stalls in steps of 10 s and specs fail on timeouts that have nothing to do with the code. Do not raise `maxWorkers` or turn `fileParallelism` back on without checking that on such a machine. `pnpm test:cov` raises the test and hook timeouts to 30 s: with coverage the run is two to three times slower and a single stall fails a 5 s test. `pnpm test:e2e` / `pnpm test:unit` runs one project. The integration suite is not a project of this config: it has its own (below), so `pnpm test` never needs a database.
@@ -172,29 +176,22 @@ Set by `transactions/accounts` (T14); categories, transactions and transfers fol
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` and `AUTH_CHECKS_SECRET` must all differ (env validation enforces it), so one kind of signed value is never accepted as another. In production `OIDC_REDIRECT_URI` must be `https:` too (the login cookie is `Secure`).
 - Run: `pnpm dev` (watch), `pnpm build`, `pnpm test`, `pnpm lint`; `pnpm db:seed` fills the dev database with demo data (see Demo data); `pnpm openapi:export --out <file>` writes the OpenAPI document (see OpenAPI export); `pnpm test:integration` needs Postgres and Redis (`pnpm infra:up`); `pnpm test:image` needs Docker, the image (`pnpm image:build`), Postgres and Redis. CI runs all of them (see CI).
 
-## Dev environment (Postgres + Keycloak)
+## Dev environment
 
-`docker/docker-compose.yaml` (project `coffra-dev`). **DEV ONLY — all credentials are public.**
-
-```
-pnpm infra:up      # postgres + redis + keycloak, waits for healthchecks (Keycloak cold start ~30 s)
-pnpm infra:down    # stops containers; Postgres data stays on volume `coffra-pgdata`
-pnpm infra:logs
-```
+`docker/docker-compose.yaml` (project `coffra-dev`): Postgres, Redis and Keycloak. Starting them, the ports and the
+logins are in [README.md](./README.md) (Run it locally, Dev services). **DEV ONLY — all credentials are public.** What
+matters when you change something:
 
 - Never run `docker compose down -v` — it deletes `coffra-pgdata` (the dev database).
-- `pnpm dev` does not start Docker; run `infra:up` first. Ports bind to `127.0.0.1` only.
-- Postgres: `localhost:5439`, user/password `coffra`, DB `coffra_dev` (= `DATABASE_URL` in `.env.example`). `pnpm test:integration` creates and drops its own database `coffra_test` on the same server and never touches `coffra_dev`; `docker compose -f docker/docker-compose.yaml up -d --wait postgres` starts Postgres alone, without Keycloak.
-- Keycloak: `http://localhost:8080`, admin console `admin` / `admin`. Realm `coffra`, client `coffra-be`
-  (confidential, secret `coffra-dev-secret`, PKCE S256 enforced, redirect `http://localhost:3000/api/auth/callback`).
-  Login user `dev@coffra.local` / `dev`; its `sub` is fixed (`dde84b4e-…`), so `User.externalSubject` survives recreation.
+- `pnpm dev` does not start Docker. `pnpm test:integration` creates and drops its own database `coffra_test` on the same server and never touches `coffra_dev`; `docker compose -f docker/docker-compose.yaml up -d --wait postgres` starts Postgres alone, without Keycloak.
+- The `sub` of the dev user `dev@coffra.local` is fixed (`dde84b4e-…`), so `User.externalSubject` survives a recreation of Keycloak; the seed (`DEMO_USER`) relies on it.
 - Keycloak keeps **no state** (embedded H2, no volume). `docker/keycloak/coffra-realm.json` is the single source of truth,
   imported on container creation only. After editing it: `docker compose -f docker/docker-compose.yaml up -d --force-recreate keycloak`
   (a plain `restart` keeps the already imported realm).
 - To capture changes made in the admin console: `docker compose -f docker/docker-compose.yaml exec keycloak /opt/keycloak/bin/kc.sh export --realm coffra --file /tmp/r.json`,
   `docker compose … cp keycloak:/tmp/r.json …`, then prettier-format and commit.
 - `iss` must equal `OIDC_ISSUER_URL` exactly (`KC_HOSTNAME` is pinned to `http://localhost:8080`). The app runs on the host, not in a container.
-- A real IdP (homelab Keycloak) only needs the `OIDC_*` env vars changed plus an equivalent client (confidential, PKCE S256, matching redirect URI).
+- A real identity provider only needs the `OIDC_*` variables and an equivalent client: README → Identity provider.
 
 ## Container image
 
@@ -215,7 +212,7 @@ pnpm test:image      # the image against the dev Postgres and Redis (needs Docke
 
 ## Deployment (k8s)
 
-The homeport k3s cluster runs the app from the Helm chart in `k8s/chart/` (skill `deploy-k8s`, ADR 0031). A release is a tag `coffra-be-v<version>`: `.github/workflows/coffra-be-build-push.yml` builds the image from `docker/node/prisma/Dockerfile`, pushes `ghcr.io/lukasbriza/coffra-be`, writes the tag into `values.yaml`, commits to `master` and syncs ArgoCD. The ArgoCD `Application` lives in the GitOps repo, never here.
+The homeport k3s cluster runs the app from the Helm chart in `k8s/chart/` (skill `deploy-k8s`, ADR 0031). A release is a tag `coffra-be-v<version>`: `.github/workflows/coffra-be-build-push.yml` builds the image from `docker/node/prisma/Dockerfile`, pushes `ghcr.io/lukasbriza/coffra-be`, writes the tag into `values.yaml`, commits to `master` and syncs ArgoCD. The ArgoCD `Application` (named `coffra-be`, source `apps/coffra-be/k8s/chart` on `master` with `values.yaml` and `values-prod.yaml`, namespace `coffra-be`, `CreateNamespace=true`, no automated sync) lives in the GitOps repo, never here.
 
 - **A closed chart:** the app, its Postgres and its Redis, nothing shared. Postgres is a `StatefulSet` (`postgres:17.5-alpine3.22`, the version of the dev compose) with the headless Service `<release>-postgres` and a `local-path` volume from `volumeClaimTemplates` that outlives the StatefulSet and `helm uninstall`. Redis is a Deployment with the Service `<release>-redis` and no volume (rate limit counters only). Both accept connections from the pods of the app only (`NetworkPolicy`).
 - **Migrations are an init container of the app's Deployment:** the same image, `node node_modules/prisma/build/index.js migrate deploy` in `/app/apps/coffra-be`, never part of the start. The app container starts only after it succeeded; until Postgres answers it fails and kubelet retries it. `replicas: 1`. Not a Job: a pre-sync Job would run before the Postgres of the same chart exists.
@@ -230,6 +227,21 @@ The homeport k3s cluster runs the app from the Helm chart in `k8s/chart/` (skill
   - **Off by default:** `scaleToZero.enabled` is `false` in `values.yaml` and in `values-prod.yaml`. Switch it to `true` in `values-prod.yaml` only after a sync without it works, then sync again (a new tag or `workflow_dispatch`; from `master` that builds and deploys the image `coffra-be-vmaster`).
   - **Test it:** after the cooldown `kubectl get deploy -n coffra-be` shows `coffra-be` at `0/0` (Postgres and Redis still running); `curl -i https://<host>/api/health` first gets the cold-start page, then `200` once the pod is ready, and `kubectl get deploy -n coffra-be` shows `1/1`.
   - **The interceptor is one more proxy between Traefik and the app.** Check the client address the rate limit counts (ADR 0025): if the interceptor adds itself to `X-Forwarded-For`, `TRUST_PROXY_HOPS` has to count it.
+- **Outside the repo** (the operator's part): the Infisical keys, the client at the identity provider (README → Identity provider) with the redirect URI `https://<ingress.host>/api/auth/callback`, a DNS record for the host, the repository secret `ARGOCD_AUTH_TOKEN`, the `Application` in the GitOps repo, and the namespace `coffra-be` in the cold-start page chart of the cluster repo (scale to zero only). Traefik sees the real client address only when its Service keeps it (`externalTrafficPolicy: Local`), a setting of the cluster.
+- **The first release** also needs the new GHCR package `coffra-be` switched to Public (the first push creates it private; the cluster has no pull secret) and the certificate: `kubectl create job --from=cronjob/cert-renewal -n cert-renewal cert-renewal-manual`, then `kubectl get secret coffra-be-tls -n coffra-be`. Tag only a commit whose CI is green: the release workflow runs no tests.
+- **Roll back** by setting `image.tag` in `values.yaml` to an earlier `coffra-be-v<version>`, pushing it to `master` and syncing the app in ArgoCD. A tag on an older commit does not work: the workflow edits `values.yaml` of that commit and then checks out `master`. Migrations are never rolled back, so the older image must work with the newer schema.
+- **Logs:** `kubectl logs -n coffra-be deploy/coffra-be -c migrate` (the migrations of the last start), `-c coffra-be` (the app).
+- **Backup and restore.** The data lives on the disk of the one node; a dump has to leave it. The dump goes through a file in the pod, not through a shell redirect (PowerShell changes the bytes of a binary stream):
+
+  ```bash
+  kubectl exec -n coffra-be coffra-be-postgres-0 -- pg_dump -U coffra -d coffra -Fc -f /tmp/coffra.dump
+  kubectl cp coffra-be/coffra-be-postgres-0:/tmp/coffra.dump ./coffra-<date>.dump
+  kubectl exec -n coffra-be coffra-be-postgres-0 -- rm /tmp/coffra.dump
+  ```
+
+  Restore with the app stopped: with scale to zero on, hold it at zero (`kubectl annotate scaledobject coffra-be -n coffra-be autoscaling.keda.sh/paused-replicas=0`, afterwards the same key with `-` to remove it), otherwise `kubectl scale deploy/coffra-be -n coffra-be --replicas=0` (the next sync sets it back). Then `kubectl cp ./coffra-<date>.dump coffra-be/coffra-be-postgres-0:/tmp/coffra.dump` and `kubectl exec -n coffra-be coffra-be-postgres-0 -- pg_restore -U coffra -d coffra --clean --if-exists /tmp/coffra.dump`.
+
+- **Secret rotation in the cluster:** the operator updates the Secret within a minute, but a running pod keeps its environment until it restarts (`kubectl rollout restart deployment/coffra-be -n coffra-be`, or the next wake with scale to zero). What each rotation does: README → Sessions, secrets and account deletion.
 
 ## CI
 
@@ -249,17 +261,7 @@ The homeport k3s cluster runs the app from the Helm chart in `k8s/chart/` (skill
 
 ## HTTP hardening
 
-Security headers, CORS, the client address behind a proxy (ADR 0025), the rate limit and its counters in Redis (ADR 0026), the Swagger UI in production (ADR 0027). Everything comes from the environment; `.env.example` lists it:
-
-| Variable                 | Default                   | Meaning                                                                                                                                                                        |
-| ------------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `CORS_ORIGINS`           | empty                     | Allowed browser origins, comma separated, each exactly as a browser sends it (`https://app.example.com`: no path, no trailing slash, no default port, no `*`). Empty: no CORS. |
-| `TRUST_PROXY_HOPS`       | `0`                       | Number of reverse proxies in front of the app (0 to 10). Decides the client address (`req.ip`) the rate limit counts.                                                          |
-| `RATE_LIMIT_TTL_SECONDS` | `60`                      | The window.                                                                                                                                                                    |
-| `RATE_LIMIT_MAX`         | `120`                     | Requests per window and client address to every route but the strict ones.                                                                                                     |
-| `RATE_LIMIT_AUTH_MAX`    | `10`                      | The same for the strict routes together.                                                                                                                                       |
-| `REDIS_URL`              | required                  | Redis (`redis://` or `rediss://`) that keeps the counters, one replica or many. While it does not answer, counted requests are `503`.                                          |
-| `SWAGGER_ENABLED`        | on, but off in production | `true` or `false`: whether `/api/swagger` (UI) and `/api/swagger-json` are served.                                                                                             |
+Security headers, CORS, the client address behind a proxy (ADR 0025), the rate limit and its counters in Redis (ADR 0026), the Swagger UI in production (ADR 0027). Everything comes from the environment: `CORS_ORIGINS`, `TRUST_PROXY_HOPS`, `RATE_LIMIT_TTL_SECONDS`, `RATE_LIMIT_MAX`, `RATE_LIMIT_AUTH_MAX`, `REDIS_URL`, `SWAGGER_ENABLED`. Their defaults and meaning are in the table of README → Configuration.
 
 ### Headers, CORS, client address
 
