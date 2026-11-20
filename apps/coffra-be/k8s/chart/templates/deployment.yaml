@@ -1,0 +1,61 @@
+{{- $tag := required "image.tag is set in the values file of the environment" .Values.image.tag }}
+{{- $image := printf "%s:%s" .Values.image.repository $tag }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      enableServiceLinks: false
+      initContainers:
+        # The app never migrates on start; the pod waits for this to succeed (it retries until Postgres answers).
+        - name: migrate
+          image: {{ $image | quote }}
+          workingDir: /app/apps/coffra-be
+          command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: DATABASE_URL
+      containers:
+        - name: coffra-be
+          image: {{ $image | quote }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          env:
+            - name: REDIS_URL
+              value: "redis://{{ .Release.Name }}-redis:{{ .Values.redis.port }}"
+            {{- with .Values.ingress.host }}
+            - name: OIDC_REDIRECT_URI
+              value: {{ printf "https://%s/api/auth/callback" . | quote }}
+            {{- end }}
+            {{- range $k, $v := .Values.env }}
+            {{- if ne (toString $v) "" }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- end }}
+          # Created by the Infisical operator (infisical.enabled) or by hand with the same keys.
+          envFrom:
+            - secretRef:
+                name: {{ .Release.Name }}-secrets
+          # /api/health checks Postgres and Redis: readiness only, so an outage of either does not restart the pod.
+          readinessProbe:
+            httpGet: { path: /api/health, port: {{ .Values.service.port }} }
+            initialDelaySeconds: 5
+          livenessProbe:
+            tcpSocket: { port: {{ .Values.service.port }} }
+            initialDelaySeconds: 15
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

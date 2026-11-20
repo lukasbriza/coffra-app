@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "incremental": false,
+    "outDir": "./build/openapi",
+    "rootDir": ".",
+    "sourceMap": false
+  },
+  "include": ["src", "scripts/openapi"],
+  "references": []
+}

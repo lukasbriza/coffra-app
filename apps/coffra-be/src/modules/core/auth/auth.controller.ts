@@ -26,6 +26,7 @@ import type { CookieOptions, Request, Response } from 'express'
 
 import { GLOBAL_PREFIX } from '../../../app.setup'
 import { type Env, NodeEnv } from '../../config'
+import { StrictRateLimit } from '../../rate-limit'
 
 import { AuthService } from './auth.service'
 import { AUTH_CHECKS_COOKIE, AUTH_CHECKS_TTL_SECONDS } from './constants'
@@ -40,8 +41,12 @@ import type { LogoutRequest, TokenPair } from './types'
  *
  * `@Public()` goes on each method, not on the class: a route added here later stays protected until someone opens it
  * on purpose. Login and callback precede any token; refresh and logout must work with an expired one.
+ *
+ * Also the strict bucket of the rate limit as a whole class (`@StrictRateLimit()`): the four routes share one low
+ * limit per client address, and a route added later is in it without anyone remembering.
  */
 @Controller('auth')
+@StrictRateLimit()
 // Swagger
 @ApiTags('auth')
 export class AuthController {

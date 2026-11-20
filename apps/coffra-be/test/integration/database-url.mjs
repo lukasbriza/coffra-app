@@ -3,7 +3,7 @@ export const DEFAULT_DATABASE_URL = 'postgresql://coffra:coffra@127.0.0.1:5439/c
 
 /**
  * The connection string of the integration suite: `TEST_DATABASE_URL` (CI, another server), or the dev Postgres.
- * Shared by the vitest config and the check that runs before it (`require-postgres.mjs`).
+ * Shared by the vitest config and the check that runs before it (`require-services.mjs`).
  *
  * @returns the connection string
  */

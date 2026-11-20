@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import { CLIENT_ID, CLIENT_SECRET, REDIRECT_URI } from '../support/fake-idp'
+import { claimsOf } from '../support/oidc-login'
 
-import { claimsOf, useAuthApp } from './setup'
+import { useAuthApp } from './setup'
 
 describe('login', () => {
   const e2e = useAuthApp()

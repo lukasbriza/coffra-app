@@ -1,0 +1,51 @@
+{{- if .Values.scaleToZero.enabled }}
+# Tells the interceptor which requests belong to this app and which metric to report.
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  target:
+    service: {{ .Release.Name }}
+    port: {{ .Values.service.port }}
+  # A rule without `paths` matches only the literal root. The prefix is the one of the
+  # Ingress, so the interceptor sees the same requests.
+  rules:
+    - hosts: [{{ .Values.ingress.host | quote }}]
+      paths:
+        - value: {{ .Values.ingress.path }}
+  scalingMetric:
+    requestRate:
+      targetValue: {{ .Values.scaleToZero.targetRequestRate }}
+      window: {{ .Values.scaleToZero.window }}
+      granularity: 1s
+  # Shown while the pod starts. The ConfigMap must exist in this namespace.
+  coldStart:
+    placeholder:
+      response:
+        bodyFromConfigMap:
+          name: coldstart-page
+          key: index.html
+        headers:
+          Refresh: "3"
+---
+# Scales the app's Deployment (same name as the release) between 0 and maxReplicas
+# by the request rate the interceptor reports.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  scaleTargetRef:
+    name: {{ .Release.Name }}
+  minReplicaCount: {{ .Values.scaleToZero.minReplicas }}
+  maxReplicaCount: {{ .Values.scaleToZero.maxReplicas }}
+  cooldownPeriod: {{ .Values.scaleToZero.cooldownPeriod }}
+  triggers:
+    - type: external-push
+      metadata:
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+        interceptorRoute: {{ .Release.Name }}
+{{- end }}

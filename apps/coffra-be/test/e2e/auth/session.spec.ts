@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import type { TokenPair } from '../../../src/modules/core/auth/types'
+import { claimsOf } from '../support/oidc-login'
 
-import { ACCESS_TTL_SECONDS, REFRESH_TTL_SECONDS, claimsOf, useAuthApp } from './setup'
+import { ACCESS_TTL_SECONDS, REFRESH_TTL_SECONDS, useAuthApp } from './setup'
 
 describe('the session after a login', () => {
   const e2e = useAuthApp()

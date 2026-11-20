@@ -2,7 +2,9 @@ import { JwtService } from '@nestjs/jwt'
 import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 
-import { CHECKS_SECRET, REFRESH_SECRET, claimsOf, useAuthApp } from './setup'
+import { claimsOf } from '../support/oidc-login'
+
+import { CHECKS_SECRET, REFRESH_SECRET, useAuthApp } from './setup'
 
 // The check ADR 0011 asks of every e2e bootstrap: the app as `main.ts` boots it turns a request without a valid
 // access token away. If the global guard line were missing from `setup.ts`, every spec here would fail.

@@ -3,8 +3,10 @@ import { ApiOkResponse, ApiServiceUnavailableResponse, ApiTags } from '@nestjs/s
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus'
 
 import { Public } from '../core'
+import { SkipRateLimit } from '../rate-limit'
 
 import { PrismaHealthIndicator } from './prisma.health'
+import { RedisHealthIndicator } from './redis.health'
 
 /** Swagger schema of the result of a health check, for both the `200` and the `503` answer. */
 const healthResultSchema = {
@@ -20,9 +22,12 @@ const healthResultSchema = {
 /**
  * Probe for the container orchestrator: `GET /api/health`.
  *
- * Public, so it needs no token. The whole controller is public on purpose; a check added here is public too.
+ * Public, so it needs no token. The whole controller is public on purpose; a check added here is public too. It is also
+ * outside the rate limit: the orchestrator calls it on a timer from one address, and a `429` would make a healthy
+ * application look dead.
  */
 @Public()
+@SkipRateLimit()
 @Controller('health')
 // Swagger
 @ApiTags('health')
@@ -30,10 +35,11 @@ export class HealthController {
   constructor(
     @Inject(HealthCheckService) private readonly health: HealthCheckService,
     @Inject(PrismaHealthIndicator) private readonly prismaHealth: PrismaHealthIndicator,
+    @Inject(RedisHealthIndicator) private readonly redisHealth: RedisHealthIndicator,
   ) {}
 
   /**
-   * Runs the checks: the database answers a query.
+   * Runs the checks: the database answers a query, Redis answers `PING`.
    *
    * @returns the result of the checks, `200` when all passed
    * @throws ServiceUnavailableException when at least one check failed (`503` with the same shape)
@@ -44,6 +50,6 @@ export class HealthController {
   @ApiOkResponse({ description: 'All checks passed', schema: healthResultSchema })
   @ApiServiceUnavailableResponse({ description: 'At least one check failed', schema: healthResultSchema })
   check() {
-    return this.health.check([() => this.prismaHealth.isHealthy('database')])
+    return this.health.check([() => this.prismaHealth.isHealthy('database'), () => this.redisHealth.isHealthy('redis')])
   }
 }
