@@ -5,6 +5,9 @@
     "lint:fix": {
       "dependsOn": ["^build"],
       "outputs": [".eslintcache"]
+    },
+    "test": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/coffra-api/src/schema.json"]
     }
   }
 }

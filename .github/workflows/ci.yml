@@ -1,0 +1,164 @@
+# Checks of the app (`apps/coffra-be`) and the packages of this project on every pull request to `master` and every
+# push to it. Three independent jobs, so a failure points at its cause:
+#   check        lint, types, unit and e2e specs, build, format; no services
+#   integration  the integration specs against a real Postgres and Redis
+#   image        builds the production image and runs its specs against Postgres and Redis; nothing is published
+# No secrets, read-only token. The templates in `templates/*` are not checked here.
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Git hooks are for commits on a developer's machine.
+  HUSKY: '0'
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      # The lint (Prettier through ESLint) follows `.editorconfig`, which asks for CRLF, while the repository stores
+      # LF. With `core.autocrlf` the checkout has CRLF, as on the developer's machine; without it every file fails.
+      - name: Check out with CRLF line endings
+        run: git config --global core.autocrlf true
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify the line endings of the checkout
+        run: |
+          grep --quiet $'\r' apps/coffra-be/src/main.ts || {
+            echo '::error::The checkout has LF line endings, the lint expects CRLF (core.autocrlf).'
+            exit 1
+          }
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # The root `prettier.config.js` loads the built package; its `dist` is not in the repository.
+      - name: Build the shared Prettier config
+        run: pnpm --filter @lukasbriza/prettier-config build
+
+      - name: Lint
+        run: pnpm turbo run lint --filter=@lukasbriza/coffra-be... --filter=@lukasbriza/coffra-api...
+
+      - name: Types
+        run: pnpm turbo run ts --filter=@lukasbriza/coffra-be... --filter=@lukasbriza/coffra-api...
+
+      - name: Unit and e2e specs
+        run: pnpm turbo run test --filter=@lukasbriza/coffra-be... --filter=@lukasbriza/coffra-api...
+
+      - name: Build
+        run: pnpm turbo run build --filter=@lukasbriza/coffra-be... --filter=@lukasbriza/coffra-api...
+
+      - name: Format
+        run: pnpm --filter @lukasbriza/coffra-be --filter @lukasbriza/coffra-api format
+
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17.5-alpine3.22
+        env:
+          # A throwaway database server; the same public credentials as the dev compose.
+          POSTGRES_USER: coffra
+          POSTGRES_PASSWORD: coffra
+          POSTGRES_DB: coffra_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U coffra -d coffra_ci" --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:8.2-alpine3.22
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      # The suite creates, migrates and drops this database itself; its name must start with `coffra_test`.
+      TEST_DATABASE_URL: postgresql://coffra:coffra@127.0.0.1:5432/coffra_test
+      TEST_REDIS_URL: redis://127.0.0.1:6379
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Not through turbo: its strict environment mode would not pass `TEST_*` on.
+      - name: Integration specs
+        run: pnpm --filter @lukasbriza/coffra-be test:integration
+
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17.5-alpine3.22
+        env:
+          POSTGRES_USER: coffra
+          POSTGRES_PASSWORD: coffra
+          POSTGRES_DB: coffra_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U coffra -d coffra_ci" --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:8.2-alpine3.22
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      # The containers of the suite reach both through `host.docker.internal` (the specs rewrite the loopback host).
+      TEST_DATABASE_URL: postgresql://coffra:coffra@127.0.0.1:5432/coffra_test
+      TEST_REDIS_URL: redis://127.0.0.1:6379
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # Before the install: the build needs none, so a broken image fails first.
+      - name: Build the image
+        run: pnpm --filter @lukasbriza/coffra-be image:build
+
+      # The specs import the generated Prisma client, so they need the workspace installed.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Not through turbo: its strict environment mode would not pass `TEST_*` on.
+      - name: Image specs
+        run: pnpm --filter @lukasbriza/coffra-be test:image

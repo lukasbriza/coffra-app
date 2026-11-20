@@ -1,0 +1,3 @@
+# Docker passes heredocs and shell lines on byte for byte: a carriage return at the end of a line breaks them
+# (`set -e\r`). Dockerfiles therefore stay LF in every checkout, `core.autocrlf` or not.
+Dockerfile text eol=lf

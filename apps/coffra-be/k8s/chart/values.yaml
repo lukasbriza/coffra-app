@@ -1,0 +1,81 @@
+image:
+  repository: ghcr.io/lukasbriza/coffra-be
+  # image.tag is set per environment (values-test.yaml, values-prod.yaml) by
+  # .github/workflows/coffra-be-build-push.yml.
+
+# The migrations run in an init container of every pod; keep a single replica.
+replicas: 1
+
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { cpu: 500m, memory: 512Mi }
+
+service:
+  port: 3000
+
+ingress:
+  enabled: false
+  # Also builds OIDC_REDIRECT_URI (https://<host>/api/auth/callback).
+  host: ""
+  # Every route of the app is under /api; the rest of the host is served by other Ingresses (the frontend).
+  path: /api
+
+# Non-secret env vars. A key with an empty value is not rendered: the app rejects an empty number.
+# REDIS_URL (the Redis of this chart) and OIDC_REDIRECT_URI are set by the deployment template.
+env:
+  NODE_ENV: production
+  TRUST_PROXY_HOPS: "1"
+  SWAGGER_ENABLED: "false"
+  OIDC_ISSUER_URL: ""
+  OIDC_CLIENT_ID: ""
+  CORS_ORIGINS: ""
+
+postgres:
+  replicas: 1
+  image: postgres:17.5-alpine3.22
+  user: coffra
+  database: coffra
+  port: 5432
+  storage:
+    size: 2Gi
+    storageClassName: local-path
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+redis:
+  replicas: 1
+  image: redis:8.2-alpine3.22
+  port: 6379
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 128Mi }
+
+# Needs KEDA and the HTTP Add-on on the cluster. Keep false for the first sync,
+# set true in the values file of the environment (values-test.yaml) once the app works.
+scaleToZero:
+  enabled: false
+  minReplicas: 0
+  maxReplicas: 1
+  # Seconds without matching requests before scaling back down to 0.
+  cooldownPeriod: 300
+  # Requests per second, averaged over `window`, that justify scaling up.
+  targetRequestRate: 5
+  window: 1m
+
+infisical:
+  enabled: false
+  authRef:
+    name: homeport-infisical-auth
+    namespace: infisical-system
+  projectId: ""
+  environmentSlug: prod
+  secretPath: /coffra/be
+  # Kubernetes env var name -> Infisical secret key.
+  secrets:
+    DATABASE_URL: DATABASE_URL
+    POSTGRES_PASSWORD: POSTGRES_PASSWORD
+    OIDC_CLIENT_SECRET: OIDC_CLIENT_SECRET
+    JWT_ACCESS_SECRET: JWT_ACCESS_SECRET
+    JWT_REFRESH_SECRET: JWT_REFRESH_SECRET
+    AUTH_CHECKS_SECRET: AUTH_CHECKS_SECRET

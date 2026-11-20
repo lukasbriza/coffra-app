@@ -13,6 +13,7 @@ import { CategoriesController } from '../../../src/modules/transactions/categori
 import { CategoriesService } from '../../../src/modules/transactions/categories/categories.service'
 import { DashboardController } from '../../../src/modules/transactions/dashboard/dashboard.controller'
 import { DashboardService } from '../../../src/modules/transactions/dashboard/dashboard.service'
+import { TransactionsDataEraser } from '../../../src/modules/transactions/erasure/transactions-data.eraser'
 import { TransactionsController } from '../../../src/modules/transactions/transactions/transactions.controller'
 import { TransactionsService } from '../../../src/modules/transactions/transactions/transactions.service'
 import { TransfersController } from '../../../src/modules/transactions/transfers/transfers.controller'
@@ -43,7 +44,7 @@ class ConsumerModule {
 }
 
 describe('TransactionsModule', () => {
-  it('wires in the accounts, categories, dashboard, transactions, transfers and totals features with nothing but Prisma from outside the domain', async () => {
+  it('wires in the accounts, categories, dashboard, erasure, transactions, transfers and totals features with nothing but Prisma from outside the domain', async () => {
     const moduleRef = await Test.createTestingModule({ imports: [PrismaStubModule, TransactionsModule] }).compile()
 
     expect(moduleRef.get(AccountsService)).toBeInstanceOf(AccountsService)
@@ -57,6 +58,7 @@ describe('TransactionsModule', () => {
     expect(moduleRef.get(TransfersService)).toBeInstanceOf(TransfersService)
     expect(moduleRef.get(TransfersController)).toBeInstanceOf(TransfersController)
     expect(moduleRef.get(TransactionTotalsService)).toBeInstanceOf(TransactionTotalsService)
+    expect(moduleRef.get(TransactionsDataEraser)).toBeInstanceOf(TransactionsDataEraser)
   })
 
   it('lets a module of another domain inject the totals service by importing the domain module', async () => {
@@ -73,6 +75,14 @@ describe('TransactionsModule', () => {
         imports: [PrismaStubModule, ConsumerModule.injecting(AccountsService)],
       }).compile(),
     ).rejects.toThrow(/AccountsService/u)
+  })
+
+  it('keeps the eraser private too: core finds it through @OwnerDataEraser(), nobody injects it', async () => {
+    await expect(
+      Test.createTestingModule({
+        imports: [PrismaStubModule, ConsumerModule.injecting(TransactionsDataEraser)],
+      }).compile(),
+    ).rejects.toThrow(/TransactionsDataEraser/u)
   })
 })
 

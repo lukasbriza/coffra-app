@@ -5,8 +5,10 @@ import { ConfigService } from '@nestjs/config'
 import { Test, type TestingModule } from '@nestjs/testing'
 import { describe, expect, it } from 'vitest'
 
+import * as coreDomain from '../../../src/modules/core'
 import { AUTH_PROVIDER, type AuthProviderInterface, CoreModule, OwnershipService } from '../../../src/modules/core'
 import { OidcAuthProvider } from '../../../src/modules/core/auth/oidc-auth.provider'
+import { UserDeletionService } from '../../../src/modules/core/users/user-deletion.service'
 import { PrismaService } from '../../../src/modules/prisma'
 
 const config: Record<string, unknown> = {
@@ -44,5 +46,28 @@ describe('CoreModule', () => {
     const moduleRef = await compileCoreModule()
 
     expect(moduleRef.get(OwnershipService)).toBeInstanceOf(OwnershipService)
+  })
+
+  it('wires in the deletion of users', async () => {
+    const moduleRef = await compileCoreModule()
+
+    expect(moduleRef.get(UserDeletionService, { strict: false })).toBeInstanceOf(UserDeletionService)
+  })
+})
+
+describe('the barrel of the core domain', () => {
+  it('exports what other domains and main.ts use, the port of the user deletion among them, and no type at run time', () => {
+    expect(Object.keys(coreDomain).toSorted()).toStrictEqual([
+      'AUTH_PROVIDER',
+      'AuthTokensService',
+      'CoreModule',
+      'CurrentOwner',
+      'CurrentUser',
+      'JwtAuthGuard',
+      'OwnerDataEraser',
+      'OwnershipModule',
+      'OwnershipService',
+      'Public',
+    ])
   })
 })

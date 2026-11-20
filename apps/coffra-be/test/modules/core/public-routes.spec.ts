@@ -1,7 +1,6 @@
 import 'reflect-metadata'
 
 import { Controller, Get, Global, type INestApplication, Logger, Module } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { DiscoveryModule, DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core'
 import { Test } from '@nestjs/testing'
 import request from 'supertest'
@@ -14,7 +13,9 @@ import { IS_PUBLIC_KEY } from '../../../src/modules/core/auth/constants'
 import { UsersService } from '../../../src/modules/core/users/users.service'
 import { HealthModule } from '../../../src/modules/health'
 import { PrismaService } from '../../../src/modules/prisma'
+import { RedisService } from '../../../src/modules/redis'
 import { TransactionsModule } from '../../../src/modules/transactions'
+import { ConfigStubModule } from '../config/config-stub'
 
 // The real `CoreModule`, `HealthModule` and `TransactionsModule`, wired as in the app: this is where the global guard and the list of
 // public routes are proven. Only the outside world is stubbed (config, database, identity provider).
@@ -54,17 +55,13 @@ class ProbeController {
 
 @Global()
 @Module({
-  providers: [{ provide: ConfigService, useValue: { get: (key: string) => config[key] } }],
-  exports: [ConfigService],
+  providers: [
+    { provide: PrismaService, useValue: { $queryRaw: () => Promise.resolve([]) } },
+    { provide: RedisService, useValue: { ping: () => Promise.resolve('PONG') } },
+  ],
+  exports: [PrismaService, RedisService],
 })
-class ConfigStubModule {}
-
-@Global()
-@Module({
-  providers: [{ provide: PrismaService, useValue: { $queryRaw: () => Promise.resolve([]) } }],
-  exports: [PrismaService],
-})
-class PrismaStubModule {}
+class InfrastructureStubModule {}
 
 describe('the public routes of the API', () => {
   const provider = { login: vi.fn(), validateSession: vi.fn(), getUserInfo: vi.fn(), logout: vi.fn() }
@@ -84,7 +81,14 @@ describe('the public routes of the API', () => {
     provider.logout.mockReset().mockResolvedValue({ endSessionUrl: null })
 
     const moduleRef = await Test.createTestingModule({
-      imports: [ConfigStubModule, PrismaStubModule, CoreModule, HealthModule, TransactionsModule, DiscoveryModule],
+      imports: [
+        ConfigStubModule.with(config),
+        InfrastructureStubModule,
+        CoreModule,
+        HealthModule,
+        TransactionsModule,
+        DiscoveryModule,
+      ],
       controllers: [ProbeController],
     })
       .overrideProvider(AUTH_PROVIDER)
