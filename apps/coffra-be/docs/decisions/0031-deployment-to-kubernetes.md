@@ -29,14 +29,22 @@ migrations with a second command and never on start (ADR 0023). ArgoCD syncs onl
   one Secret; the non-secret configuration is in the values of the chart. The database URL is stored whole.
 - **Readiness checks `/api/health`** (Postgres and Redis), **liveness only the TCP port**: an outage of a dependency
   takes the pod out of the Service without restarting it.
-- **The image is published by a release workflow** on a tag `coffra-be-v<version>`, which also writes the tag into the
-  values of the chart and syncs ArgoCD. The CI workflow still builds the image without publishing it (ADR 0030).
+- **The image is published by one release workflow, and the tag decides the environment:** `coffra-be-test-v<version>`
+  releases to test, `coffra-be-v<version>` to production. Every tag builds the image of its commit and publishes it under
+  the name of the tag, writes that name into `image.tag` of the environment's values file on `master` and syncs that
+  environment's Application. There is no manual trigger. The CI workflow still builds the image without publishing it
+  (ADR 0030).
 - **The API shares its host with the frontend:** its Ingress takes only the prefix `/api` (the global prefix of every
   route), the frontend the rest. One origin, so the browser needs no CORS between them.
 - **The app scales to zero on demand** through the KEDA HTTP Add-on: the Ingress points to its interceptor (an
   `ExternalName` Service), an `InterceptorRoute` matches the host and a `ScaledObject` scales the app's Deployment
   between 0 and 1. The app stops after an idle period and the next request starts it, behind a cold-start page.
-  Postgres and Redis keep running. It is switched on in the production values only after a sync without it works.
+  Postgres and Redis keep running. It is switched on in the values of an environment only after a sync without it
+  works.
+- **One values file and one ArgoCD Application per environment**, each in a namespace of its own, all with the Helm
+  release name `coffra-be` (`helm.releaseName` of the Application). The first is the test environment
+  (`values-test.yaml`, Application and namespace `coffra-be-test`, Infisical environment `test`); production
+  (`values-prod.yaml`, `coffra-be-prod`) is set up later. `image.tag` lives only in the values file of an environment.
 
 ## Alternatives considered
 
@@ -52,14 +60,25 @@ migrations with a second command and never on start (ADR 0023). ArgoCD syncs onl
 - The database URL composed in the pod from the password (`$(POSTGRES_PASSWORD)`) – one secret less, but a URL that is
   not stored anywhere; the deployments of the cluster keep each variable as one Infisical key.
 - Liveness on `/api/health` – a database outage would restart the app in a loop without fixing anything.
-- Scale to zero by hand (`replicas: 0` in the production values) – nothing wakes the app; every use needs a change in
-  git and a sync.
+- Scale to zero by hand (`replicas: 0` in the values of the environment) – nothing wakes the app; every use needs a
+  change in git and a sync.
+- A release name per environment (`coffra-be-test`) – the Service names and so the stored database URL would differ
+  between the environments; the namespace already keeps them apart.
 - Postgres and Redis scaled to zero with the app – KEDA scales only the app's Deployment, and the app cannot start
   without them.
+- One release tag and one image tag in `values.yaml` for every environment – a release to test would move production
+  too.
+- Promoting the image of the test release to production by retagging it, and refusing a production tag on a commit not
+  released to test – production would get exactly the tested image, but the tag alone should decide what is deployed.
+- A manual trigger of the workflow – one more way to deploy next to the tag.
 
 ## Consequences
 
-- The release name must be `coffra-be`: the stored database URL names the Service `coffra-be-postgres`.
+- The release name must be `coffra-be` in every environment: the stored database URL names the Service
+  `coffra-be-postgres`. An Application whose name differs (`coffra-be-test`) has to set `helm.releaseName`.
+- A production release builds the image again from its commit: the same code, not the same bytes as the image that
+  ran in test. Nothing stops a production tag on a commit that never ran in test.
+- A production tag fails at its first step until `values-prod.yaml` exists.
 - The password is in Infisical twice (in the URL and alone) and must match. Postgres reads it only when it initialises
   an empty volume; changing it later needs `ALTER USER` in the database as well.
 - More than one replica of the app needs another way to migrate first; the init container of each pod would run the

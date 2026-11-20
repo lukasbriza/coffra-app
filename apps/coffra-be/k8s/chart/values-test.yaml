@@ -1,3 +1,6 @@
+image:
+  # Bumped by .github/workflows/coffra-be-build-push.yml on every coffra-be-test-v* tag.
+  tag: coffra-be-test-v0.1.0
 ingress:
   enabled: true
   host: "www.coffra.test.lukasbriza.eu"
@@ -7,5 +10,6 @@ env:
 infisical:
   enabled: true
   projectId: "701566fc-6192-4ca5-b01b-b9e5a4c31214"
+  environmentSlug: test
 scaleToZero:
   enabled: false

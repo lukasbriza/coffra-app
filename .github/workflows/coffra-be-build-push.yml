@@ -1,13 +1,21 @@
-# Builds and pushes the coffra-be image, bumps the tag in the chart values, commits to
-# master, then syncs ArgoCD. The ArgoCD Application has no automated sync, so nothing
-# deploys except through this workflow's sync step.
+# Builds and pushes the coffra-be image, writes its tag into the values file of the
+# environment, commits it to master, then syncs that environment's ArgoCD Application.
+# The tag decides the environment:
+#   coffra-be-test-v<version> -> test (values-test.yaml, Application coffra-be-test)
+#   coffra-be-v<version>      -> prod (values-prod.yaml, Application coffra-be-prod)
+# The Applications have no automated sync, so nothing deploys except through this workflow.
 name: Build and push coffra-be image
 
 on:
   push:
     tags:
+      - 'coffra-be-test-v*'
       - 'coffra-be-v*'
-  workflow_dispatch: {}
+
+# Releases push to master one after another.
+concurrency:
+  group: coffra-be-release
+  cancel-in-progress: false
 
 jobs:
   build-and-push:
@@ -18,9 +26,25 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Get version from tag
+      - name: Resolve the environment from the tag
         id: vars
-        run: echo "version=${GITHUB_REF_NAME#coffra-be-v}" >> "$GITHUB_OUTPUT"
+        run: |
+          case "$GITHUB_REF_NAME" in
+            coffra-be-test-v*) environment=test; app=coffra-be-test ;;
+            coffra-be-v*) environment=prod; app=coffra-be-prod ;;
+            *) echo "::error::Unexpected tag $GITHUB_REF_NAME"; exit 1 ;;
+          esac
+          values="apps/coffra-be/k8s/chart/values-${environment}.yaml"
+          if [ ! -f "$values" ]; then
+            echo "::error::$values does not exist: the $environment environment is not set up"
+            exit 1
+          fi
+          {
+            echo "environment=$environment"
+            echo "app=$app"
+            echo "values=$values"
+            echo "image_tag=$GITHUB_REF_NAME"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
@@ -37,33 +61,44 @@ jobs:
             APP=coffra-be
             PORT=3000
           push: true
-          tags: ghcr.io/lukasbriza/coffra-be:coffra-be-v${{ steps.vars.outputs.version }}
+          tags: ghcr.io/lukasbriza/coffra-be:${{ steps.vars.outputs.image_tag }}
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
 
-      - name: Bump image tag in Helm values
-        run: |
-          sed -i "s/tag: coffra-be-v.*/tag: coffra-be-v${{ steps.vars.outputs.version }}/" apps/coffra-be/k8s/chart/values.yaml
-
-      - name: Commit and push updated values
+      - name: Write the image tag into the values of the environment on master
+        env:
+          ENVIRONMENT: ${{ steps.vars.outputs.environment }}
+          VALUES: ${{ steps.vars.outputs.values }}
+          IMAGE_TAG: ${{ steps.vars.outputs.image_tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # A tag checkout is a detached HEAD. Switch to the branch ArgoCD tracks.
+          # A tag checkout is a detached HEAD on the tagged commit. The values are written on
+          # the branch ArgoCD tracks, so a tag on an older commit (a rollback) works too.
           git fetch origin master
           git checkout master
-          git add apps/coffra-be/k8s/chart/values.yaml
+          sed -i "s/^  tag: .*/  tag: ${IMAGE_TAG}/" "$VALUES"
+          grep -q "^  tag: ${IMAGE_TAG}$" "$VALUES" || { echo "::error::No image tag in $VALUES"; exit 1; }
+          git add "$VALUES"
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: bump coffra-be image to v${{ steps.vars.outputs.version }}"
+            git commit -m "chore: bump coffra-be ${ENVIRONMENT} image to ${IMAGE_TAG}"
           fi
+          pushed=false
           for i in 1 2 3; do
-            git push origin master && break
+            if git push origin master; then
+              pushed=true
+              break
+            fi
             echo "push rejected, rebasing and retrying ($i/3)"
             git fetch origin master
             git rebase origin/master
             sleep 2
           done
+          if [ "$pushed" != true ]; then
+            echo "::error::Could not push $VALUES to master"
+            exit 1
+          fi
 
       - name: Install argocd CLI
         run: |
@@ -74,6 +109,7 @@ jobs:
       - name: Sync via ArgoCD
         env:
           ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+          ARGOCD_APP: ${{ steps.vars.outputs.app }}
         run: |
-          argocd app sync coffra-be --server argocd.lukasbriza.eu --grpc-web
-          argocd app wait coffra-be --server argocd.lukasbriza.eu --grpc-web --health
+          argocd app sync "$ARGOCD_APP" --server argocd.lukasbriza.eu --grpc-web
+          argocd app wait "$ARGOCD_APP" --server argocd.lukasbriza.eu --grpc-web --health

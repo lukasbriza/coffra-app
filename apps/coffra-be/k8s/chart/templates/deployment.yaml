@@ -1,3 +1,5 @@
+{{- $tag := required "image.tag is set in the values file of the environment" .Values.image.tag }}
+{{- $image := printf "%s:%s" .Values.image.repository $tag }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,7 +19,7 @@ spec:
       initContainers:
         # The app never migrates on start; the pod waits for this to succeed (it retries until Postgres answers).
         - name: migrate
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ $image | quote }}
           workingDir: /app/apps/coffra-be
           command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
           env:
@@ -28,7 +30,7 @@ spec:
                   key: DATABASE_URL
       containers:
         - name: coffra-be
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ $image | quote }}
           ports:
             - containerPort: {{ .Values.service.port }}
           env:

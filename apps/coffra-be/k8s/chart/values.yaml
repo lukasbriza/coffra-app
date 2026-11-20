@@ -1,7 +1,7 @@
 image:
   repository: ghcr.io/lukasbriza/coffra-be
-  # Bumped by .github/workflows/coffra-be-build-push.yml on every coffra-be-v* tag.
-  tag: coffra-be-v0.1.0
+  # image.tag is set per environment (values-test.yaml, values-prod.yaml) by
+  # .github/workflows/coffra-be-build-push.yml.
 
 # The migrations run in an init container of every pod; keep a single replica.
 replicas: 1
@@ -52,7 +52,7 @@ redis:
     limits: { cpu: 200m, memory: 128Mi }
 
 # Needs KEDA and the HTTP Add-on on the cluster. Keep false for the first sync,
-# set true in values-prod.yaml once the app works.
+# set true in the values file of the environment (values-test.yaml) once the app works.
 scaleToZero:
   enabled: false
   minReplicas: 0
