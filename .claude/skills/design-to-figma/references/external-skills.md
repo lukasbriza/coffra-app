@@ -14,76 +14,84 @@ node .claude/skills/design-to-figma/scripts/preflight.mjs
 
 ## Pins
 
+An **app screen needs nothing installed.** Everything the pipeline needs either runs from
+`pnpm dlx` or uses what is already on the machine.
+
 | Tool | Install | Licence | Role |
 |---|---|---|---|
-| taste-skill (`design-taste-frontend`) | `npx skills add https://github.com/Leonxlnx/taste-skill --skill "design-taste-frontend"` | MIT | generator — phases 1–3 |
-| impeccable detector | **nothing to install** — `npx impeccable detect` | Apache-2.0 | the phase 3 gate |
-| designlang | `npx designlang install-browser` once | MIT | reference extraction + brand check |
+| impeccable detector | **nothing** — `pnpm dlx impeccable detect` | Apache-2.0 | the phase 3 gate |
+| designlang | `pnpm dlx designlang install-browser` once | MIT | reference extraction + brand check |
+| `shoot.mjs` | **nothing** — ours, drives the installed Chromium | — | phase 3 screenshots |
 | html2figma | Figma Community plugin | free, unlimited | HTML → native layers |
 | Tokens Studio | Figma Community plugin | free licence | DTCG → Figma variables |
+| taste-skill | see below | MIT | **landing pages only** |
 
-Re-run the same install command to update. Record a breaking change here when one bites.
+Re-run the same command to update. Record a breaking change here when one bites.
 
-## taste-skill — the generator
+## There is no generator for app screens
 
-Install the single skill, not the whole collection — the repo also ships image-generation and
-legacy style skills:
+This was a deliberate change after reading what the installed taste-skill actually is. The form
+of an app screen is dealt by procedure — `references/directions.md` — not by a tool, because the
+part that prevents slop is the facts, and no external skill can read this repo's contract.
+
+For a dense data screen the layout is largely dictated by what the screen must show. Style
+matters far less than it does for a hero section, which is exactly where the skill ecosystem is
+concentrated.
+
+## taste-skill — landing pages, not app screens
+
+Version 2.5.x builds **company and product websites**. Its own description names landing, company,
+product, shop, cafe, hotel, studio, SaaS, AI, developer-tool and game sites; its page kinds are
+`software`, `product`, `service`, `place`, `gaming`, `tech`; its references are sections, copy
+voice, photographs, effects and scenes. There is no app-screens reference in it, and the one
+mention of product UI is a mockup inside a marketing hero — *"never a generic dashboard"*.
+
+So it designs the page that sells the app, not the app. Full pass: `references/landing-page.md`.
 
 ```bash
-npx skills add https://github.com/Leonxlnx/taste-skill --skill "design-taste-frontend"
+pnpm dlx skills add https://github.com/Leonxlnx/taste-skill \
+  --skill "design-taste-frontend" --agent claude-code --copy --rename taste-skill -y
 ```
 
-In Claude Code the plugin route works too: `/plugin marketplace add Leonxlnx/taste-skill`, then
-`/plugin install taste-skill@taste-skill`. The skill is namespaced under `taste-skill:`, so it
-does not collide with the skills in this repo, and it lands in a `taste-skill` folder — which is
-the path `.gitignore` excludes.
+`--rename taste-skill` gives the folder the name `.gitignore` excludes. Install the single skill,
+not the whole collection — the repo also ships image-generation and legacy style skills.
 
-Preflight reports the resolved path to its `inspect.mjs`, which is what phase 3 needs — the
-skill can only name it as a placeholder, because the install location varies.
+Its real scripts are `start.mjs` (deals palettes and type pairings), `gate.mjs` (start and finish
+gates), `consistency.mjs` (five widths), `copy-lint.mjs`, `perf.mjs`, `shoot.mjs`, `moments.mjs`,
+`photos.mjs`, `icons.mjs`, `effects.mjs`. **There is no `inspect.mjs`** — an earlier version of
+this file said there was, taken from its web guide rather than from the installed skill. Follow
+its own `SKILL.md`; it is authoritative and more detailed than anything worth copying here.
 
-Requires Node 22+, a Chrome/Edge/Chromium install or `CHROME_PATH`, and network access for its
-asset fetching. On Windows, verify `CHROME_PATH` by hand before the first run. `ffmpeg` on PATH
-is optional, for WebP output. The kit is large — tens of megabytes of icons and photographs —
-which is another reason it is a gitignored dependency rather than vendored.
-
-Take from it: the three-direction deal, the idea sentence, the app-screens reference (it covers
-dashboards, admin views, settings and inboxes), and its inspector for the 1440/768/390 pass.
-
-`inspect.mjs` inspects a **running page** given as a URL, or a built `index.html`; whether a bare
-file path works without a server is undocumented, so phase 3 serves the screens and passes a URL.
-It writes screenshots to `.taste-skill/before` and `.taste-skill/after` — copy them into the
-report folder so the report is self-contained. `lint.mjs` lints source, not a rendered page.
-
-Feed it the brief from phase 0, never style adjectives. Its own guidance asks for concrete
-facts, and for app screens it wants the user role, the data fields and the screen's key
-question — which is exactly what `<ui>/design/brief.md` is shaped to supply.
-
-Budget: a full run is roughly 30–45 minutes and several hundred thousand tokens. This is the
-whole reason phases 1–3 run in the `design-build` subagent.
+Needs Node 22+, a Chromium-family browser or `CHROME_PATH`, and network access for its asset
+fetching. `ffmpeg` on PATH is optional. The kit is tens of megabytes of photographs and icons,
+which is why it is a gitignored dependency and never vendored.
 
 ## impeccable — detector only
 
-Take `npx impeccable detect`: a deterministic rule set that runs in code with no LLM and no API
+Take `pnpm dlx impeccable detect`: a deterministic rule set that runs in code with no LLM and no API
 key. Cheap, repeatable, and it belongs in phase 3's gate.
 
 **Do not** use its commands or its skill. It is a complete orchestrator with its own direction
 dealing and its own context files, so running it alongside taste-skill means two pipelines
 competing over the same decisions and paying twice for them.
 
-**Do not run `npx impeccable install`.** Verified: the detector runs straight from npx with
+**Do not run `pnpm dlx impeccable install`.** Verified: the detector runs straight from pnpm dlx with
 nothing installed.
 
 ```bash
-npx impeccable detect <file|folder|URL> [--json]
+pnpm dlx impeccable detect <file|folder|URL> [--json]
 ```
 
 Tested against a deliberately bad screen; it returned `low-contrast` and `italic-serif-display`
-findings with file, severity, category and snippet. `--json` gives the structured form, which is
-what phase 3 parses.
+findings with file, severity, category and snippet. `--json` writes the structured form to stdout
+and pnpm's progress lines to stderr, so `2>/dev/null` leaves parseable JSON.
 
-**It exited 0 with two `warning` findings.** Do not use the exit code as the gate — count the
-findings, or parse `--json`. A gate that trusts exit 0 passes a page with every warning in the
-book.
+**The exit code is the gate**: 0 on a clean file, non-zero when it finds something. Measured both
+ways, against a clean screen and a deliberately bad one.
+
+**Never read that status through a pipe.** `detect … | head` reports `head`'s status, which is
+always 0. That mistake made an earlier version of this file claim the detector always exits 0 —
+it does not, and a gate built on that belief passes everything.
 
 **WCAG AA contrast is covered.** The `low-contrast` rule reports the measured ratio against the
 4.5:1 body and 3:1 large-text thresholds. No separate contrast check is needed.
@@ -98,19 +106,18 @@ call to opt out of.
 
 Two uses, both optional but both cheap:
 
-- `npx designlang <url>` reads a reference site in a real browser and reports its colours,
+- `pnpm dlx designlang <url>` reads a reference site in a real browser and reports its colours,
   type, spacing, radii, shadows and motion. Raw material for phase 1 — never the design itself.
   Requires Node 20+. It drives Chromium through Playwright, so run
-  `npx designlang install-browser` **once** — without it the tool falls back to an installed
+  `pnpm dlx designlang install-browser` **once** — without it the tool falls back to an installed
   Chrome, which may not be there.
 - It can also write agent rules of its own, including `.claude/skills/designlang/SKILL.md`.
   Do not keep that file; it would collide with this skill's scope. `.gitignore` excludes it.
-- `npx designlang verify-ui localhost:4321/<name>.html --brand design/DESIGN.md` checks a built screen
+- `pnpm dlx designlang verify-ui localhost:4321/<name>.html --brand design/DESIGN.md` checks a built screen
   against the recorded direction and scores how generic it reads. Part of phase 3.
 
-`verify-ui` takes a URL, which is the other reason phase 3 serves the screens — with
-`python3 -m http.server`, because `npx serve` answers `301` on a `.html` path and redirects to
-the extensionless one.
+`verify-ui` takes a URL, which is why phase 3 serves the screens — with `python3 -m http.server`,
+because `pnpm dlx serve` answers `301` on a `.html` path and redirects to the extensionless one.
 
 It can also emit W3C DTCG tokens, which overlaps with our own export script. Prefer the script:
 it reads the project's tokens package, so the code stays the source of truth rather than a scrape.

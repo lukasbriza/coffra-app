@@ -6,9 +6,14 @@ tools: Read, Write, Edit, Grep, Glob, Bash, Skill
 
 # Design build
 
-You run phases 0–3 of the `design-to-figma` skill in an isolated context. A full generator
-run costs 30–45 minutes and several hundred thousand tokens, which is why this work does not
-happen in the main thread.
+You run phases 0–3 of the `design-to-figma` skill in an isolated context. Reading the contract
+and the decision records, dealing three directions and building a screen costs a lot of tokens,
+which is why this work does not happen in the main thread.
+
+There is **no external generator**. You deal the directions yourself, by the procedure in
+`references/directions.md`. If the target is a marketing page rather than a screen behind the
+login, stop and say so — that is a different pass with its own generator
+(`references/landing-page.md`), not your job.
 
 **Load the `design-to-figma` skill first.** Its references hold the procedures; this file is
 the operating contract, not a duplicate of them.
@@ -68,15 +73,15 @@ before phase 1. Report and stop rather than half-running the pipeline:
 node .claude/skills/design-to-figma/scripts/preflight.mjs
 ```
 
-One script covers the runtime, the generator, the tokens package and the project's design files.
+One script covers the runtime, the tokens package and the project's design files.
 `/design` normally runs it before dispatching you, so this is a second line of defence — cheap,
 and it catches the case where the skill was invoked outside the command.
 
 If it exits non-zero, **stop and report its output**. Do not install anything: you cannot ask,
 and an install you chose is an install the requester did not approve.
 
-It also prints the resolved path to the generator's `inspect.mjs`. Use that in phase 3 instead of
-the `<taste-skill>/` placeholder.
+Nothing has to be installed for an app screen: the detector and the brand check run from
+`pnpm dlx`, and screenshots use the Chromium preflight located.
 
 If `<ui>` is an Expo or other native app, run the whole pipeline at 390 and mark every screen
 file as a drawing surface. Do not stop after phase 1, and do not author it at 1440.
@@ -148,31 +153,40 @@ python3 -m http.server 4321 -d <ui>/design/screens >/dev/null 2>&1 &
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null' EXIT
 
-npx designlang verify-ui localhost:4321/<name>.html --brand design/DESIGN.md
-node <taste-skill>/inspect.mjs --app http://localhost:4321/<name>.html
+pnpm dlx designlang verify-ui localhost:4321/<name>.html --brand design/DESIGN.md
 ```
 
-Use `python3 -m http.server`, not `npx serve`. Two tested reasons: `serve` answers `301` on
-`/<name>.html` and redirects to the extensionless path, and `kill $SERVER` kills only the `npx`
+Use `python3 -m http.server`, not `pnpm dlx serve`. Two tested reasons: `serve` answers `301` on
+`/<name>.html` and redirects to the extensionless path, and `kill $SERVER` kills only the `pnpm dlx`
 wrapper, so the real server keeps the port and the next run reads a stale page. If you must use
 `serve`, start it with `setsid`, tear it down with `kill -- -$SERVER`, and drop the `.html` from
 the URL.
 
-The inspector renders 1440 / 768 / 390 into `.taste-skill/`. Copy the screenshots into
-`<ui>/design/reports/<name>/` so the report stands alone.
-
-The deterministic detector needs neither the server nor an install — point it at the file:
+Screenshots are our own, no dependency — Chrome's `--screenshot` flag does it:
 
 ```bash
-npx impeccable detect <ui>/design/screens/<name>.html --json
+node .claude/skills/design-to-figma/scripts/shoot.mjs <ui>/design/screens/<name>.html
 ```
 
-It covers WCAG AA contrast, so do not write a separate contrast check. **It exits 0 even when it
-finds things**: count the findings or parse the JSON. Treating exit 0 as a pass would wave
-through a page with every warning in the book.
+Writes `<name>-1440.png`, `-768.png`, `-390.png` into `<ui>/design/reports/<name>/`, so the
+report is self-contained. `--widths` and `--height` override the defaults.
+
+The deterministic detector needs neither the server nor an install. Point it at the file and use
+its **exit code as the gate**:
+
+```bash
+pnpm dlx impeccable detect "<ui>/design/screens/<name>.html" --json 2>/dev/null > detect.json
+DETECT=$?        # 0 = clean, non-zero = findings
+```
+
+It covers WCAG AA contrast, so do not write a separate contrast check.
+
+**Never read its status through a pipe.** `detect … | head` returns `head`'s exit code, which is
+always 0, and a page with every warning in the book then looks clean. Redirect first, read `$?`,
+then read the JSON.
 
 Fix what it finds and re-run, **at most twice**. Then stop and report what is left: looping on a
-generator that costs hundreds of thousands of tokens per pass is worse than an open finding. A
+pass that costs a lot of tokens each time is worse than an open finding. A
 finding kept on purpose is recorded with its reason in the report; never silently suppressed.
 
 **Do not hand a failing page to phase 4** — repairing a layer tree inside Figma costs far more

@@ -83,6 +83,7 @@ Output is scoped the same way `plan-project` scopes a plan.
 | `DESIGN.md` — direction, shared core, per-platform sections | repo-wide | `design/DESIGN.md` |
 | `tokens.config.json` — exports → DTCG mapping | repo-wide | `design/tokens.config.json` |
 | `tokens/*.json` — generated | repo-wide | `design/tokens/` |
+| `landing/index.html` — the marketing page, if any | the app being designed | `<ui>/design/landing/` |
 
 Write every document in the requester's language, and link the plan and the GitHub issue at the
 top. Create folders when they are missing.
@@ -112,20 +113,24 @@ the Figma file and the React implementation are both derived from.
 node .claude/skills/design-to-figma/scripts/preflight.mjs
 ```
 
-Checks the runtime, the external generator, the tokens package and the project's design files,
-and prints the exact install command for whatever is missing. Exits non-zero when a required item
+Checks the runtime, the tokens package and the project's design files, and prints the exact
+install command for whatever is missing. Exits non-zero when a required item
 is absent, so `/design` can stop and ask the requester to install rather than failing three
 phases in.
 
-Only one thing genuinely needs installing — the generator. The detector runs straight from
-`npx`, and the two Figma plugins cannot be detected, so preflight lists them as a reminder.
-Pins and install commands: `references/external-skills.md`.
+**An app screen needs nothing installed.** There is no external generator: the facts come from
+the contract and the form is dealt here, by procedure, in `references/directions.md`. The
+detector and the brand check run straight from `pnpm dlx`; screenshots use the Chromium already
+on the machine. Only the two Figma plugins are manual, and preflight lists them as a reminder.
+
+A marketing page is a different deliverable with its own generator — `references/landing-page.md`.
+Tool inventory and pins: `references/external-skills.md`.
 
 ## Pipeline
 
 Run in order. Every gate blocks the next phase. Phases 1–3 belong in the `design-build` subagent —
-a full generator run costs roughly 30–45 minutes and several hundred thousand tokens, which must
-not land in the main thread.
+reading the contract and the decision records, dealing three directions and building a screen
+costs a lot of tokens, which must not land in the main thread.
 
 | # | Phase | Output | Gate |
 |---|---|---|---|
@@ -135,18 +140,11 @@ not land in the main thread.
 | 3 | Verify | `<ui>/design/reports/<name>.md` | detector findings = 0, or accepted in writing |
 | 4 | Project | Figma file | manual, two plugins, variables first |
 
-### Saying what you want
+### Driving it: your input, and the first run
 
-`/design-brief` takes the brief by interview before anything is designed — five questions, then
-the look, then whatever is still open — and writes `design/DESIGN.md`'s Purpose and constraints.
-Run it once per repo. It exists because composing Purpose, constraints and a key question in one
-shot, unprompted, is the hardest part of the pipeline; `references/discovery.md` holds the
-question set and the rules for running it.
-
-Skipping it is fine. The same three inputs can arrive as free text on the `/design` line:
-
-Either way the input lands in one of three places, and `/design` echoes where each piece went so
-a misroute is caught before anything is built.
+Your own idea, constraints and the key question arrive as free text on the `/design` line — or
+through the `/design-brief` interview, whose question set is `references/discovery.md`. Either
+way they land in one of three places, with different weight:
 
 | Kind | Destination | Binding? |
 |---|---|---|
@@ -154,46 +152,11 @@ a misroute is caught before anything is built.
 | Constraint — rules something out, checkable | `design/DESIGN.md` → Requester's constraints | **yes — a violation is a gate finding** |
 | Content intent — what a screen is for | `<ui>/design/brief.md` → key question | overrides the derived one |
 
-```
-/design dashboard "dark, dense, numbers lead. Portfolio piece — a recruiter will
-  look at it. The key question is whether I can afford something this month."
-```
+The first run has a different shape from the rest, and getting it wrong is expensive: do not
+settle the direction on its own for a single screen, pick the hardest screen first, and spend the
+one-screen window deliberately — that is when a direction change is still cheap.
 
-A bare adjective is none of these. "Premium" rules nothing out, so `/design` asks one question —
-*what would make it wrong?* — and records the constraint behind it, takes a reference URL, or
-drops it on the record. That is the one place the no-adjectives rule bends, and it bends into
-something checkable rather than into mood.
-
-Constraints outlive the direction: re-dealing keeps them, and only the requester removes one.
-
-### Starting from nothing
-
-The first run is a different shape from the rest, and getting it wrong is expensive.
-
-**Do not settle the direction on its own when you are building one screen.** Phase 1 runs inside
-the first `/design <screen>` anyway — tokens have to exist before markup. Splitting it produces a
-direction approved on paper, with nothing to look at; and the skill's own rule is that a
-direction is judged against real screens.
-
-Splitting is worth it only when several screens follow immediately, because then a bad direction
-costs all of them.
-
-**Pick the hardest screen first.** Not the login page — the densest one: the table, the dashboard,
-the screen with filters and long labels and a negative number. A direction and a token set derived
-from a sparse screen will not survive the dense one, and the reverse is only a relaxation.
-
-**The one-screen window is when a direction change is cheap.** With exactly one screen built, a
-re-deal costs that screen. With four, it costs the repo. So spend that moment deliberately: look
-at the gate's 1440 / 768 / 390 screenshots, decide whether the direction holds, and only then
-build screen two.
-
-**No reference URLs is a supported path**, not a degraded one. The generator deals its three
-candidates from the brief's facts. References are better raw material, so if there are two or
-three products in the same domain worth looking at, now is the cheapest moment to supply them —
-after screens exist, adding one is a direction revision with repo-wide blast radius.
-
-Each later screen is then just `/design <name>`: it reads `design/DESIGN.md` and both
-`components.md` files, conforms to them, and appends what it adds.
+Both of those, in full: `references/workflow.md`.
 
 ### Phase 0 — Ground
 
@@ -209,8 +172,10 @@ and conform. Changing it later is a revision with a blast radius; see below.
 
 1. If the user supplied reference URLs, run the extractor per URL. Raw material only — never ship
    an extracted system as the design.
-2. Deal three candidate directions, pick one, derive the idea sentence from brief facts. Record
-   the two rejected directions and why, so the choice is not re-litigated at screen four.
+2. Deal three candidate directions, pick one, derive the idea sentence from brief facts. They
+   must differ structurally, not by shade — the procedure and the axes are in
+   `references/directions.md`. Record the two rejected ones and why, so the choice is not
+   re-litigated at screen four.
 3. **Derive the token set from the brief, not from a list.** The screens say how many text levels,
    how many surfaces and which states this app actually needs. If the tokens package is missing,
    scaffold it from the template and then reshape it — the template is a starting example, not a
@@ -247,31 +212,41 @@ python3 -m http.server 4321 -d <ui>/design/screens >/dev/null 2>&1 &
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null' EXIT
 
-npx designlang verify-ui localhost:4321/<name>.html --brand design/DESIGN.md
-node <taste-skill>/inspect.mjs --app http://localhost:4321/<name>.html
+pnpm dlx designlang verify-ui localhost:4321/<name>.html --brand design/DESIGN.md
 ```
 
-Use `python3 -m http.server`, not `npx serve`. Two tested reasons: `serve` answers `301` on
-`/<name>.html` and redirects to the extensionless path, and `kill $SERVER` kills only the `npx`
+Use `python3 -m http.server`, not `pnpm dlx serve`. Two tested reasons: `serve` answers `301` on
+`/<name>.html` and redirects to the extensionless path, and `kill $SERVER` kills only the `pnpm dlx`
 wrapper, so the real server keeps the port and the next run reads a stale page. If you must use
 `serve`, start it with `setsid`, tear it down with `kill -- -$SERVER`, and drop the `.html` from
 the URL.
 
-The inspector renders at 1440, 768 and 390 and writes screenshots under `.taste-skill/`. Copy
-them into `<ui>/design/reports/<name>/` so the report is self-contained.
-
-The deterministic detector needs no server and no install — it reads the file:
+Screenshots are our own, no dependency — Chrome's `--screenshot` flag does it:
 
 ```bash
-npx impeccable detect <ui>/design/screens/<name>.html --json
+node .claude/skills/design-to-figma/scripts/shoot.mjs <ui>/design/screens/<name>.html
 ```
 
-It covers WCAG AA contrast, so there is no separate contrast check. **It exits 0 even with
-findings**, so count them or parse the JSON; an exit-code gate would pass anything.
+Writes `<name>-1440.png`, `-768.png`, `-390.png` into `<ui>/design/reports/<name>/`, so the
+report is self-contained. `--widths` and `--height` override the defaults.
+
+The deterministic detector needs no server and no install. It reads the file, and its **exit
+code is the gate**:
+
+```bash
+pnpm dlx impeccable detect <ui>/design/screens/<name>.html --json 2>/dev/null > detect.json
+# 0 = clean, non-zero = findings. pnpm's progress goes to stderr, so the JSON stays parseable.
+```
+
+It covers WCAG AA contrast, so there is no separate contrast check.
+
+**Never read its status through a pipe.** `detect … | head` returns `head`'s exit code, which is
+always 0, and a page with every warning in the book then looks clean. Redirect first, read `$?`,
+then look at the JSON.
 
 Write findings, scores and screenshot paths to `<ui>/design/reports/<name>.md`. Fix and re-run,
-**at most twice**; then report what is left rather than looping on a generator that costs
-hundreds of thousands of tokens per pass. A finding kept on purpose is recorded with its reason,
+**at most twice**; then report what is left rather than looping on a pass that costs a lot of
+tokens each time. A finding kept on purpose is recorded with its reason,
 never silently suppressed.
 
 **Never hand a failing page to phase 4.** Repairing a layer tree inside Figma costs far more than
@@ -297,6 +272,19 @@ file, and work in **drafts** (unlimited) rather than the team folder (3 files).
 
 Figma edits do not survive a re-import. Treat the file as output: fix the HTML and re-import,
 and name the new frame `<name> vN` rather than importing over the old one.
+
+## Landing pages are a different pass
+
+The page that sells the product is not a variant of a screen behind the login. Its hierarchy
+comes from a sales argument and its substance from copy and photographs; an app screen's comes
+from the data and one key question. A tool built for one produces slop in the other.
+
+That pass has its own generator, its own gates and its own output folder:
+`references/landing-page.md`. Brand colours are shared with the app design; the type scale,
+density and component vocabulary deliberately are not.
+
+Build the app first when both are in scope — a product shot of a screen that exists beats an
+invented mockup, and a landing page built first has to invent the product it is selling.
 
 ## Revising
 

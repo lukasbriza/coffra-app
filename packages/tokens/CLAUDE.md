@@ -9,9 +9,13 @@ Framework-free design tokens. Inherits root `CLAUDE.md`.
 
 ## Surface (`src/index.ts`)
 
-- `palette` (+ `mono`, `state`, `black`/`white`/`gray`) — brand colours.
-- `spacing(steps)` + `radius` — 4px grid.
-- `fontSize` + `fontWeight` — type scale primitives (unitless).
+- `palette` (+ `mono`, `state`, `black`/`white`/`gray`) — the template's colours, still read by
+  `@lukasbriza/theme`; not part of the Coffra design.
+- `color` — the Coffra design's colour roles (`bg`, `text`, `accent`, `amount`, `band`, `chart`).
+- `spacing(steps)` + `radius` + `borderWidth` — 4px grid, corner radii, stroke widths.
+- `size` — fixed layout sizes; `breakpoint` — where the web layout changes.
+- `fontSize` + `lineHeight` + `letterSpacing` + `fontWeight` — type scale primitives (unitless px).
+- What each role means, and the Figma mapping: `design/DESIGN.md`, `design/tokens.config.json`.
 
 ## Why it exists
 

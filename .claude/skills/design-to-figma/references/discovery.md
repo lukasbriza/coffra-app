@@ -59,7 +59,7 @@ keystroke.
 
 > **a)** Reference URLs — name two or three products whose interface you like. Best input.
 > **b)** Pick a starting direction from the list below.
-> **c)** Let the generator deal three candidates from your answers and choose.
+> **c)** Have three candidates dealt from your answers, and choose on a real screen.
 
 If **b**, offer directions described by **properties, not moods** — a mood word here would
 reintroduce exactly what the pipeline rejects:

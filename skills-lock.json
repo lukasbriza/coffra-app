@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "skills": {
+    "taste-skill": {
+      "source": "Leonxlnx/taste-skill",
+      "commit": "f6b76575f949707b4e3c37cd86cb44b0b98643e8",
+      "sourceType": "github",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "66f3c7e47c8a37e90da34ec1f4172d4fcd59805f3f6aff9402d6028bfd9622d1",
+      "skillName": "design-taste-frontend",
+      "installMode": "copy"
+    }
+  }
+}

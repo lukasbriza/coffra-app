@@ -66,3 +66,5 @@ yarn-error.log*
 .taste-skill/
 **/design/tokens/
 **/design/reports/**/*.png
+# Reference images are third-party work: local input for the direction, never committed.
+**/design/references/

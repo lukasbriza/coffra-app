@@ -131,6 +131,9 @@ Rules:
   1. scaffold its shell now (`pnpm turbo gen app-next` or `app-react`), then design into it;
   2. write to the repo root `design/` and move it once the app exists.
 - `target` = `direction` still needs `<api>`: the direction is judged against real screens.
+- `target` = `landing` is the **marketing-page pass**, not a screen. It has its own generator and
+  its own gates: read `references/landing-page.md` and follow taste-skill's own `SKILL.md`. Do
+  not dispatch `design-build` for it — that agent builds app screens.
 - **Native `<ui>`?** An Expo app runs the whole pipeline, authored at a fixed 390, and its HTML
   is a drawing surface that must never be ported to React Native. Say which platform you
   resolved when dispatching — it decides the width and the banner.
@@ -148,17 +151,18 @@ Rules:
 node .claude/skills/design-to-figma/scripts/preflight.mjs
 ```
 
-It checks the runtime, the external generator, the tokens package and the project's design files,
+It checks the runtime, the tokens package and the project's design files,
 and prints the exact install command for anything missing. Run it on a status call too — that is
 the invocation most likely to come from someone who has installed nothing yet.
 **If it exits non-zero, relay its output verbatim and stop** — do not dispatch, and do not install anything yourself. The requester
 installs, then runs `/design` again.
 
-Nothing else needs installing: the detector runs straight from `npx`, and the two Figma plugins
+Nothing else needs installing: the detector runs straight from `pnpm dlx`, and the two Figma plugins
 cannot be detected, so preflight lists them as a manual reminder.
 
-Preflight also reports the resolved path to the generator's `inspect.mjs`. Pass it to the
-subagent — phase 3 needs it and the skill documents it only as a placeholder.
+An app screen needs nothing installed, so on this path preflight should pass clean on a fresh
+machine with a browser and Python. taste-skill appears only under "landing pages only" — it is
+not required here.
 
 Then add what preflight does not cover:
 
@@ -171,7 +175,7 @@ tokens and must not land in the main thread.
 
 Pass, explicitly: `target`, the confirmed `<ui>`, the confirmed `<api>` list, `referenceUrls`,
 the classified `intent` with each item's destination, the plan path if one exists, the
-`inspect.mjs` path from preflight, and whether the direction is already settled. The subagent treats these as given and will stop rather than re-derive them.
+and whether the direction is already settled. The subagent treats these as given and will stop rather than re-derive them.
 
 ### 7. Relay
 

@@ -1,0 +1,49 @@
+{
+  "entry": "packages/tokens/dist/index.js",
+  "sets": {
+    "color": [
+      {
+        "export": "color",
+        "type": "color"
+      }
+    ],
+    "spacing": [
+      {
+        "export": "spacing",
+        "type": "dimension",
+        "as": "space",
+        "steps": 12
+      },
+      {
+        "export": "radius",
+        "type": "dimension"
+      },
+      {
+        "export": "borderWidth",
+        "type": "dimension"
+      },
+      {
+        "export": "size",
+        "type": "dimension"
+      }
+    ],
+    "typography": [
+      {
+        "export": "fontSize",
+        "type": "dimension"
+      },
+      {
+        "export": "lineHeight",
+        "type": "dimension"
+      },
+      {
+        "export": "letterSpacing",
+        "type": "dimension"
+      },
+      {
+        "export": "fontWeight",
+        "type": "fontWeight"
+      }
+    ]
+  }
+}

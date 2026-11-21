@@ -1,0 +1,1528 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Přehled — Coffra</title>
+    <!--
+      Dashboard, web, authored at 1440 and responsive down (1024 and 600 are the breakpoints of design/DESIGN.md).
+      Direction: B — Verdict band. Data: brief.md → Dashboard (demo seed, today 21. 11. 2026, period 6m, CZK).
+      Every value in :root is a token from packages/tokens (design/tokens/*.json). The --share values on the share
+      bars and the SVG geometry of the charts are data (shares and amounts), not style.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700&display=swap"
+    />
+    <style>
+      :root {
+        --color-bg-page: #f3f4f8;
+        --color-bg-surface: #ffffff;
+        --color-bg-sunken: #eaecf2;
+        --color-text-primary: #14161f;
+        --color-text-secondary: #5a5f70;
+        --color-text-on-accent: #ffffff;
+        --color-accent-primary: #4b4ee8;
+        --color-accent-soft: #e6e7fc;
+        --color-band-bg: #12141c;
+        --color-band-surface: #1d2030;
+        --color-band-track: #2a2e42;
+        --color-band-selected: #ffffff;
+        --color-band-text-primary: #f4f5fa;
+        --color-band-text-secondary: #a4a9bd;
+        --color-band-text-on-selected: #14161f;
+        --color-band-amount-positive: #5fd68b;
+        --color-chart-series-1: #9085e9;
+        --color-chart-series-2: #d95926;
+        --color-chart-series-3: #2b9fc4;
+        --color-chart-series-4: #c98500;
+        --color-chart-series-5: #d55181;
+        --color-chart-other: #a3a7b8;
+        --color-chart-income: #14161f;
+        --color-chart-expense: #5a5f70;
+        --color-chart-expense-area: #d3d6e1;
+        --color-chart-gain-area: #cdebd8;
+        --color-chart-grid: #e4e6ee;
+        --color-chart-track: #eaecf2;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 40px;
+        --space-12: 48px;
+        --radius-sm: 4px;
+        --radius-md: 12px;
+        --radius-lg: 24px;
+        --radius-full: 999px;
+        --border-width-rule: 1px;
+        --border-width-line: 2px;
+        --border-width-focus: 2px;
+        --size-sidebar: 248px;
+        --size-content: 1200px;
+        --size-control: 40px;
+        --size-touch: 44px;
+        --size-tile: 36px;
+        --size-icon: 20px;
+        --size-key: 10px;
+        --size-ring: 176px;
+        --size-ring-narrow: 112px;
+        --size-trend: 200px;
+        --size-bar: 6px;
+        --size-amount: 128px;
+        --size-shares: 176px;
+        --size-column: 360px;
+
+        --font-size-caption: 13px;
+        --font-size-label: 14px;
+        --font-size-body: 16px;
+        --font-size-heading: 18px;
+        --font-size-figure: 24px;
+        --font-size-title: 28px;
+        --font-size-display-narrow: 40px;
+        --font-size-display: 64px;
+        --line-height-caption: 18px;
+        --line-height-label: 20px;
+        --line-height-body: 24px;
+        --line-height-heading: 24px;
+        --line-height-figure: 32px;
+        --line-height-title: 36px;
+        --line-height-display-narrow: 44px;
+        --line-height-display: 68px;
+        --letter-spacing-tight: -1.5px;
+        --letter-spacing-snug: -0.4px;
+        --letter-spacing-normal: 0px;
+        --font-weight-regular: 400;
+        --font-weight-medium: 500;
+        --font-weight-semibold: 600;
+        --font-weight-bold: 700;
+
+        --font-family-text: 'Urbanist', 'Segoe UI', system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--color-bg-page);
+        color: var(--color-text-primary);
+        font-family: var(--font-family-text);
+        font-size: var(--font-size-body);
+        line-height: var(--line-height-body);
+        letter-spacing: var(--letter-spacing-normal);
+        font-weight: var(--font-weight-regular);
+        font-variant-numeric: tabular-nums;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      button {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 0;
+        cursor: pointer;
+      }
+
+      ol,
+      ul {
+        list-style: none;
+      }
+
+      :focus-visible {
+        outline: var(--border-width-focus) solid var(--color-accent-primary);
+        outline-offset: var(--border-width-focus);
+      }
+
+
+      .icon {
+        width: var(--size-icon);
+        height: var(--size-icon);
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: var(--border-width-line);
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .amount {
+        white-space: nowrap;
+      }
+
+      .caption {
+        font-size: var(--font-size-caption);
+        line-height: var(--line-height-caption);
+        color: var(--color-text-secondary);
+      }
+
+      /* ---------- App frame ---------- */
+
+      /* The sidebar spans the full height; the content column is the band, then the light detail. */
+      .app {
+        display: grid;
+        grid-template-columns: var(--size-sidebar) minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+        grid-template-areas:
+          'nav band'
+          'nav content';
+        min-height: 100vh;
+        background: var(--color-bg-page);
+      }
+
+      /* ---------- Navigation ---------- */
+
+      .sidebar {
+        grid-area: nav;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-8);
+        min-width: 0;
+        padding: var(--space-8) var(--space-4) var(--space-6);
+        background: var(--color-bg-surface);
+      }
+
+      .wordmark {
+        padding: 0 var(--space-3);
+        font-size: var(--font-size-title);
+        line-height: var(--line-height-title);
+        letter-spacing: var(--letter-spacing-snug);
+        font-weight: var(--font-weight-bold);
+      }
+
+      .nav-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+
+      .nav-group__label {
+        padding: 0 var(--space-3) var(--space-2);
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        min-height: var(--size-touch);
+        padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-label);
+        line-height: var(--line-height-label);
+        font-weight: var(--font-weight-medium);
+        color: var(--color-text-secondary);
+      }
+
+      .nav-item[aria-current='page'] {
+        color: var(--color-text-primary);
+        font-weight: var(--font-weight-bold);
+      }
+
+      .sidebar .nav-item[aria-current='page'] {
+        background: var(--color-accent-soft);
+      }
+
+      .tile {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--size-tile);
+        height: var(--size-tile);
+        flex: none;
+        border-radius: var(--radius-md);
+        background: var(--color-bg-sunken);
+        color: var(--color-text-secondary);
+      }
+
+      .nav-item[aria-current='page'] .tile {
+        border-radius: var(--radius-full);
+        background: var(--color-accent-primary);
+        color: var(--color-text-on-accent);
+      }
+
+      .nav-item .tile {
+        border-radius: var(--radius-full);
+        background: none;
+      }
+
+      .sidebar__room {
+        flex: 1;
+      }
+
+      .sidebar__account {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+
+      .sidebar__email {
+        padding: 0 var(--space-3) var(--space-2);
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .topbar,
+      .tabbar {
+        display: none;
+      }
+
+      /* ---------- Primary action ---------- */
+
+      .primary-action {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        min-height: var(--size-control);
+        padding: 0 var(--space-5) 0 var(--space-4);
+        border-radius: var(--radius-full);
+        background: var(--color-accent-primary);
+        color: var(--color-text-on-accent);
+        font-size: var(--font-size-label);
+        line-height: var(--line-height-label);
+        font-weight: var(--font-weight-bold);
+        white-space: nowrap;
+      }
+
+      /* ---------- Band ---------- */
+
+      .band {
+        grid-area: band;
+        display: flex;
+        flex-direction: column;
+        background: var(--color-band-bg);
+        color: var(--color-band-text-primary);
+        padding: var(--space-8) var(--space-10) var(--space-10);
+      }
+
+      .band__inner,
+      .content__inner {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: var(--size-content);
+        margin: 0 auto;
+      }
+
+      .band__inner {
+        gap: var(--space-8);
+      }
+
+      .band .caption {
+        color: var(--color-band-text-secondary);
+      }
+
+      .page-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-4) var(--space-6);
+      }
+
+      .page-head__title {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+
+      .page-head h1 {
+        font-size: var(--font-size-title);
+        line-height: var(--line-height-title);
+        letter-spacing: var(--letter-spacing-snug);
+        font-weight: var(--font-weight-bold);
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-3);
+      }
+
+      /* Segmented control: the currency switch and the period control share it. */
+      .segmented {
+        display: flex;
+        gap: var(--space-1);
+        padding: var(--space-1);
+        border-radius: var(--radius-full);
+        background: var(--color-band-track);
+      }
+
+      .segmented__segment {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(var(--size-control) - var(--space-2));
+        padding: 0 var(--space-4);
+        border-radius: var(--radius-full);
+        color: var(--color-band-text-secondary);
+        font-size: var(--font-size-label);
+        line-height: var(--line-height-label);
+        font-weight: var(--font-weight-semibold);
+        white-space: nowrap;
+      }
+
+      .segmented__segment[aria-pressed='true'] {
+        background: var(--color-band-selected);
+        color: var(--color-band-text-on-selected);
+      }
+
+      /* ---------- Verdict ---------- */
+
+      .verdict {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: var(--space-6) var(--space-10);
+      }
+
+      .verdict__main {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        min-width: 0;
+      }
+
+      .verdict__text {
+        font-size: var(--font-size-heading);
+        line-height: var(--line-height-heading);
+        font-weight: var(--font-weight-semibold);
+      }
+
+      .headline {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--space-2);
+      }
+
+      .headline__value {
+        font-size: var(--font-size-display);
+        line-height: var(--line-height-display);
+        letter-spacing: var(--letter-spacing-tight);
+        font-weight: var(--font-weight-bold);
+      }
+
+      .headline__unit {
+        font-size: var(--font-size-figure);
+        line-height: var(--line-height-figure);
+        letter-spacing: var(--letter-spacing-snug);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-band-text-secondary);
+      }
+
+      .headline--positive .headline__value {
+        color: var(--color-band-amount-positive);
+      }
+
+      .sum {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        min-width: var(--size-column);
+        padding: var(--space-5) var(--space-6);
+        border-radius: var(--radius-lg);
+        background: var(--color-band-surface);
+      }
+
+      .sum__item {
+        display: grid;
+        grid-template-columns: var(--size-tile) minmax(0, 1fr) auto;
+        align-items: center;
+        column-gap: var(--space-3);
+      }
+
+      .sum__item .tile {
+        background: var(--color-band-track);
+        color: var(--color-band-text-primary);
+      }
+
+      .sum__label {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .sum__name {
+        font-size: var(--font-size-label);
+        line-height: var(--line-height-label);
+        font-weight: var(--font-weight-semibold);
+      }
+
+      .sum__value {
+        font-size: var(--font-size-heading);
+        line-height: var(--line-height-heading);
+        letter-spacing: var(--letter-spacing-snug);
+        font-weight: var(--font-weight-bold);
+        text-align: right;
+      }
+
+      /* ---------- Ring cards ---------- */
+
+      .rings {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-4);
+      }
+
+      .ring-card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-5);
+        padding: var(--space-6);
+        border-radius: var(--radius-lg);
+        background: var(--color-band-surface);
+      }
+
+      .ring-card__head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-4);
+      }
+
+      .ring-card__title {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .ring-card__title h3 {
+        font-size: var(--font-size-heading);
+        line-height: var(--line-height-heading);
+        font-weight: var(--font-weight-bold);
+      }
+
+      .ring-card__total {
+        font-size: var(--font-size-heading);
+        line-height: var(--line-height-heading);
+        letter-spacing: var(--letter-spacing-snug);
+        font-weight: var(--font-weight-bold);
+      }
+
+      .ring-card__body {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-6);
+      }
+
+      .ring {
+        display: grid;
+        place-items: center;
+        width: var(--size-ring);
+        height: var(--size-ring);
+        flex: none;
+      }
+
+      .ring > * {
+        grid-area: 1 / 1;
+      }
+
+      .ring svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .ring__centre {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .ring__share {
+        font-size: var(--font-size-figure);
+        line-height: var(--line-height-figure);
+        letter-spacing: var(--letter-spacing-snug);
+        font-weight: var(--font-weight-bold);
+      }
+
+      .slice--1 { fill: var(--color-chart-series-1); }
+      .slice--2 { fill: var(--color-chart-series-2); }
+      .slice--3 { fill: var(--color-chart-series-3); }
+      .slice--4 { fill: var(--color-chart-series-4); }
+      .slice--5 { fill: var(--color-chart-series-5); }
+      .slice--other { fill: var(--color-chart-other); }
+
+      .legend {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        flex: 1 1 calc(var(--size-column) * 2 / 3);
+        min-width: 0;
+      }
+
+      .legend-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-size: var(--font-size-label);
+        line-height: var(--line-height-label);
+      }
+
+      .key {
+        width: var(--size-key);
+        height: var(--size-key);
+        flex: none;
+        border-radius: var(--radius-sm);
+      }
+
+      .key--1 { background: var(--color-chart-series-1); }
+      .key--2 { background: var(--color-chart-series-2); }
+      .key--3 { background: var(--color-chart-series-3); }
+      .key--4 { background: var(--color-chart-series-4); }
+      .key--5 { background: var(--color-chart-series-5); }
+      .key--other { background: var(--color-chart-other); }
+
+      .legend-row__name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .legend-row__amount {
+        color: var(--color-band-text-secondary);
+      }
+
+      .legend-row__share {
+        min-width: var(--space-12);
+        text-align: right;
+        font-weight: var(--font-weight-semibold);
+      }
+
+      /* ---------- Light content ---------- */
+
+      .content {
+        grid-area: content;
+        display: flex;
+        flex-direction: column;
+        padding: var(--space-8) var(--space-10) var(--space-12);
+      }
+
+      .content__inner {
+        display: grid;
+        grid-template-columns: minmax(0, 7fr) minmax(var(--size-column), 5fr);
+        align-items: start;
+        gap: var(--space-4);
+      }
+
+      .content__column {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        min-width: 0;
+      }
+
+      .card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-5);
+        padding: var(--space-6);
+        border-radius: var(--radius-lg);
+        background: var(--color-bg-surface);
+      }
+
+      .card__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-2) var(--space-4);
+      }
+
+      .card__title {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .card__title h2 {
+        font-size: var(--font-size-heading);
+        line-height: var(--line-height-heading);
+        font-weight: var(--font-weight-bold);
+      }
+
+      /* Month trend */
+      .trend-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2) var(--space-4);
+        font-size: var(--font-size-label);
+        line-height: var(--line-height-label);
+      }
+
+      .trend-legend__item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      .swatch-line {
+        width: var(--space-4);
+        height: var(--border-width-line);
+        border-radius: var(--radius-full);
+        background: var(--color-chart-income);
+      }
+
+      .swatch-area {
+        width: var(--size-key);
+        height: var(--size-key);
+        border-radius: var(--radius-sm);
+      }
+
+      .swatch-area--expense {
+        background: var(--color-chart-expense-area);
+        outline: var(--border-width-line) solid var(--color-chart-expense);
+        outline-offset: calc(var(--border-width-line) * -1);
+      }
+
+      .swatch-area--gain {
+        background: var(--color-chart-gain-area);
+      }
+
+      .trend {
+        display: flex;
+        gap: var(--space-3);
+      }
+
+      .trend__axis {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: calc(var(--size-trend) + var(--line-height-caption));
+        text-align: right;
+      }
+
+      .trend__plot {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        flex: 1;
+        min-width: 0;
+      }
+
+      .trend__frame {
+        display: flex;
+        padding: calc(var(--line-height-caption) / 2) 0;
+      }
+
+      .trend__frame svg {
+        width: 100%;
+        height: var(--size-trend);
+        overflow: visible;
+      }
+
+      .trend__grid {
+        stroke: var(--color-chart-grid);
+        stroke-width: var(--border-width-rule);
+      }
+
+      .trend__expense-area { fill: var(--color-chart-expense-area); }
+      .trend__gain-area { fill: var(--color-chart-gain-area); }
+
+      .trend__income-line,
+      .trend__expense-line {
+        fill: none;
+        stroke-width: var(--border-width-line);
+        stroke-linecap: round;
+      }
+
+      .trend__income-line { stroke: var(--color-chart-income); }
+      .trend__expense-line { stroke: var(--color-chart-expense); }
+
+      .trend__months {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .trend__note {
+        display: flex;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-md);
+        background: var(--color-bg-sunken);
+      }
+
+      /* Share list */
+      .share-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-5);
+      }
+
+      .share-row {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+
+      .share-row__line {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+      }
+
+      .share-row__name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: var(--font-weight-semibold);
+      }
+
+      .share-row__name--none {
+        color: var(--color-text-secondary);
+        font-weight: var(--font-weight-medium);
+      }
+
+      .share-row__amount {
+        min-width: var(--size-amount);
+        text-align: right;
+        font-weight: var(--font-weight-semibold);
+      }
+
+      .bar {
+        display: flex;
+        flex: 1;
+        height: var(--size-bar);
+        border-radius: var(--radius-full);
+        background: var(--color-chart-track);
+      }
+
+      .bar__fill {
+        width: var(--share);
+        border-radius: var(--radius-full);
+        background: var(--color-chart-other);
+      }
+
+      .share-row--1 .bar__fill { background: var(--color-chart-series-1); }
+      .share-row--2 .bar__fill { background: var(--color-chart-series-2); }
+      .share-row--3 .bar__fill { background: var(--color-chart-series-3); }
+      .share-row--4 .bar__fill { background: var(--color-chart-series-4); }
+      .share-row--5 .bar__fill { background: var(--color-chart-series-5); }
+
+      .share-row__shares {
+        width: var(--size-shares);
+        flex: none;
+        text-align: right;
+      }
+
+      .share-row__indent {
+        width: var(--size-key);
+        flex: none;
+      }
+
+      /* ---------- Compact: ≤ 1024 (breakpoint.compact) ---------- */
+
+      @media (max-width: 1024px) {
+        .app {
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-rows: auto auto 1fr auto;
+          grid-template-areas:
+            'top'
+            'band'
+            'content'
+            'tabs';
+        }
+
+        .sidebar {
+          display: none;
+        }
+
+        .topbar {
+          grid-area: top;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: var(--space-4);
+          position: sticky;
+          top: 0;
+          z-index: 1;
+          padding: var(--space-2) var(--space-6);
+          background: var(--color-band-bg);
+          color: var(--color-band-text-primary);
+        }
+
+        .topbar .wordmark {
+          padding: 0;
+          font-size: var(--font-size-figure);
+          line-height: var(--line-height-figure);
+        }
+
+        .topbar .primary-action {
+          min-height: var(--size-touch);
+        }
+
+        .page-head .primary-action {
+          display: none;
+        }
+
+        .band {
+          padding: var(--space-4) var(--space-6) var(--space-8);
+        }
+
+        .content {
+          padding: var(--space-6) var(--space-6) var(--space-8);
+        }
+
+        .content__inner {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .sum {
+          flex-direction: row;
+          width: 100%;
+          min-width: 0;
+          gap: var(--space-4);
+        }
+
+        .sum__item {
+          flex: 1 1 auto;
+          grid-template-columns: var(--size-tile) minmax(0, 1fr);
+        }
+
+        .sum__item .tile {
+          grid-row: span 2;
+        }
+
+        .sum__value {
+          text-align: left;
+        }
+
+        .ring-card__body {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .ring {
+          align-self: center;
+        }
+
+        .legend {
+          flex: none;
+        }
+
+        .tabbar {
+          grid-area: tabs;
+          display: flex;
+          position: sticky;
+          bottom: 0;
+          z-index: 1;
+          padding: var(--space-2) var(--space-2) var(--space-3);
+          background: var(--color-bg-surface);
+        }
+
+        .tabbar .nav-item {
+          flex: 1;
+          flex-direction: column;
+          gap: var(--space-1);
+          padding: 0;
+          font-size: var(--font-size-caption);
+          line-height: var(--line-height-caption);
+          background: none;
+        }
+
+        .tabbar .tile {
+          width: var(--size-tile);
+          height: calc(var(--size-tile) - var(--space-2));
+        }
+      }
+
+      /* ---------- Narrow: ≤ 600 (breakpoint.narrow) ---------- */
+
+      @media (max-width: 600px) {
+        .topbar {
+          padding: var(--space-1) var(--space-4);
+        }
+
+        .topbar .primary-action {
+          padding: 0 var(--space-4) 0 var(--space-3);
+        }
+
+        .band {
+          padding: var(--space-2) var(--space-4) var(--space-6);
+        }
+
+        .band__inner {
+          gap: var(--space-4);
+        }
+
+        .page-head__title {
+          display: none;
+        }
+
+        .controls {
+          flex-wrap: nowrap;
+          width: 100%;
+          gap: var(--space-2);
+        }
+
+        .segmented__segment {
+          min-height: calc(var(--size-touch) - var(--space-2));
+          padding: 0 var(--space-3);
+        }
+
+        .segmented--period {
+          flex: 1;
+        }
+
+        .segmented--period .segmented__segment {
+          flex: 1;
+        }
+
+        .verdict {
+          gap: var(--space-4);
+        }
+
+        .verdict__main {
+          gap: var(--space-1);
+        }
+
+        .headline__value {
+          font-size: var(--font-size-display-narrow);
+          line-height: var(--line-height-display-narrow);
+          letter-spacing: var(--letter-spacing-snug);
+        }
+
+        .headline__unit {
+          font-size: var(--font-size-heading);
+          line-height: var(--line-height-heading);
+        }
+
+        .sum {
+          gap: var(--space-3);
+          padding: 0;
+          background: none;
+        }
+
+        .sum__item {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .sum__item .tile {
+          display: none;
+        }
+
+        .sum__name {
+          font-size: var(--font-size-caption);
+          line-height: var(--line-height-caption);
+          font-weight: var(--font-weight-medium);
+          color: var(--color-band-text-secondary);
+        }
+
+        .sum__value {
+          font-size: var(--font-size-label);
+          line-height: var(--line-height-label);
+        }
+
+        .rings {
+          gap: var(--space-2);
+        }
+
+        .ring-card {
+          gap: var(--space-3);
+          padding: var(--space-3);
+          border-radius: var(--radius-md);
+        }
+
+        .ring-card__title h3 {
+          font-size: var(--font-size-label);
+          line-height: var(--line-height-label);
+        }
+
+        .ring-card__title .caption,
+        .ring-card__total {
+          display: none;
+        }
+
+        .ring-card__body {
+          gap: var(--space-3);
+        }
+
+        .ring {
+          width: var(--size-ring-narrow);
+          height: var(--size-ring-narrow);
+        }
+
+        .ring__share {
+          font-size: var(--font-size-heading);
+          line-height: var(--line-height-heading);
+        }
+
+        .ring__centre .caption {
+          max-width: calc(var(--size-ring-narrow) / 2);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .legend {
+          gap: 0;
+        }
+
+        .legend-row {
+          gap: var(--space-1);
+          font-size: var(--font-size-caption);
+          line-height: var(--line-height-caption);
+        }
+
+        .legend-row__amount {
+          display: none;
+        }
+
+        .legend-row__share {
+          min-width: 0;
+        }
+
+        .content {
+          padding: var(--space-4) var(--space-4) var(--space-8);
+        }
+
+        .card {
+          padding: var(--space-5) var(--space-4);
+        }
+
+        .share-row__amount {
+          min-width: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app" data-layer="Dashboard">
+      <aside class="sidebar" data-layer="Navigation / Sidebar">
+        <p class="wordmark" data-layer="Wordmark">Coffra</p>
+        <nav class="nav-group" data-layer="Navigation / Money" aria-label="Peníze">
+          <p class="nav-group__label caption">Peníze</p>
+          <a class="nav-item" href="#" aria-current="page" data-layer="Nav item / Current">
+            <span class="tile" data-layer="Icon tile">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" /></svg>
+            </span>
+            Přehled
+          </a>
+          <a class="nav-item" href="#" data-layer="Nav item">
+            <span class="tile" data-layer="Icon tile">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4" /></svg>
+            </span>
+            Transakce
+          </a>
+          <a class="nav-item" href="#" data-layer="Nav item">
+            <span class="tile" data-layer="Icon tile">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h17v12H4a1 1 0 0 1-1-1V6a2 2 0 0 1 2-2h12v3M16 13h1" /></svg>
+            </span>
+            Účty
+          </a>
+          <a class="nav-item" href="#" data-layer="Nav item">
+            <span class="tile" data-layer="Icon tile">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8zM8 8h.01" /></svg>
+            </span>
+            Kategorie
+          </a>
+        </nav>
+        <div class="sidebar__room" data-layer="Navigation / Room for modules"></div>
+        <div class="sidebar__account" data-layer="Navigation / Account">
+          <p class="sidebar__email caption">dev@coffra.local</p>
+          <a class="nav-item" href="#" data-layer="Nav item">
+            <span class="tile" data-layer="Icon tile">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M16 5v4M10 15v4" /></svg>
+            </span>
+            Nastavení
+          </a>
+        </div>
+      </aside>
+
+      <header class="topbar" data-layer="Navigation / Top bar">
+        <p class="wordmark" data-layer="Wordmark">Coffra</p>
+        <a class="primary-action" href="#" data-layer="Primary action">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          Přidat transakci
+        </a>
+      </header>
+
+      <div class="band" data-layer="Dashboard / Band">
+        <div class="band__inner">
+          <header class="page-head" data-layer="Page header">
+            <div class="page-head__title">
+              <h1>Přehled</h1>
+              <p class="caption">1. 6. – 30. 11. 2026 · listopad včetně plánovaných plateb</p>
+            </div>
+            <div class="controls" data-layer="Controls">
+              <div class="segmented" role="group" aria-label="Měna" data-layer="Currency switch">
+                <button class="segmented__segment" type="button" aria-pressed="true" data-layer="Segment / Selected">CZK</button>
+                <button class="segmented__segment" type="button" aria-pressed="false" data-layer="Segment">EUR</button>
+              </div>
+              <div class="segmented segmented--period" role="group" aria-label="Období" data-layer="Period control">
+                <button class="segmented__segment" type="button" aria-pressed="false" data-layer="Segment">3 měsíce</button>
+                <button class="segmented__segment" type="button" aria-pressed="true" data-layer="Segment / Selected">6 měsíců</button>
+                <button class="segmented__segment" type="button" aria-pressed="false" data-layer="Segment">1 rok</button>
+              </div>
+              <a class="primary-action" href="#" data-layer="Primary action">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                Přidat transakci
+              </a>
+            </div>
+          </header>
+
+          <section class="verdict" data-layer="Dashboard / Verdict" aria-labelledby="verdict-text">
+            <div class="verdict__main">
+              <h2 class="verdict__text" id="verdict-text">Vydělali jste víc, než jste utratili</h2>
+              <p class="headline headline--positive" data-layer="Headline amount">
+                <span class="headline__value amount">+158&nbsp;842,00</span>
+                <span class="headline__unit">Kč</span>
+              </p>
+              <p class="caption">Rozdíl za 6 měsíců, 1. 6. – 30. 11. 2026</p>
+            </div>
+
+            <div class="sum" data-layer="Sum">
+              <div class="sum__item" data-layer="Sum item / Income">
+                <span class="tile" data-layer="Icon tile">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+                </span>
+                <p class="sum__label">
+                  <span class="sum__name">Příjmy</span>
+                  <span class="caption">za 6 měsíců</span>
+                </p>
+                <p class="sum__value amount">312&nbsp;000,00&nbsp;Kč</p>
+              </div>
+              <div class="sum__item" data-layer="Sum item / Expense">
+                <span class="tile" data-layer="Icon tile">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M5 20h14" /></svg>
+                </span>
+                <p class="sum__label">
+                  <span class="sum__name">Výdaje</span>
+                  <span class="caption">za 6 měsíců</span>
+                </p>
+                <p class="sum__value amount">153&nbsp;158,00&nbsp;Kč</p>
+              </div>
+              <div class="sum__item" data-layer="Sum item / Investable">
+                <span class="tile" data-layer="Icon tile">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l6-6 4 4 6-7M14 8h6v6" /></svg>
+                </span>
+                <p class="sum__label">
+                  <span class="sum__name">Lze investovat</span>
+                  <span class="caption">z příjmů za 6 měsíců</span>
+                </p>
+                <p class="sum__value">50,9&nbsp;%</p>
+              </div>
+            </div>
+          </section>
+
+          <div class="rings" data-layer="Dashboard / Rings">
+            <article class="ring-card" data-layer="Ring card / Expense" aria-labelledby="ring-expense">
+              <div class="ring-card__head">
+                <div class="ring-card__title">
+                  <h3 id="ring-expense">Výdaje za 6 měsíců</h3>
+                  <p class="caption">podle kategorií, CZK</p>
+                </div>
+                <p class="ring-card__total amount">153&nbsp;158,00&nbsp;Kč</p>
+              </div>
+              <div class="ring-card__body">
+                <div class="ring" data-layer="Ring chart">
+                  <svg viewBox="0 0 176 176" role="img" aria-label="Výdaje podle kategorií: Bydlení 65,8 %, Jídlo 20,4 %, Doprava 7,6 %, Zábava 3,3 %, Předplatná 1,3 %, Ostatní 1,5 %">
+                    <path class="slice--1" d="M89.19 0.01A88 88 0 1 1 14.91 137.01L38.17 121.41A60 60 0 1 0 88.81 28.01Z" />
+                    <path class="slice--2" d="M13.61 135.02A88 88 0 0 1 20.32 31.75L41.86 49.65A60 60 0 0 0 37.28 120.06Z" />
+                    <path class="slice--3" d="M21.87 29.95A88 88 0 0 1 53.94 6.86L64.78 32.68A60 60 0 0 0 42.91 48.42Z" />
+                    <path class="slice--4" d="M56.15 5.97A88 88 0 0 1 71.36 1.59L76.65 29.08A60 60 0 0 0 66.28 32.07Z" />
+                    <path class="slice--5" d="M73.7 1.17A88 88 0 0 1 78.38 0.53L81.44 28.36A60 60 0 0 0 78.25 28.8Z" />
+                    <path class="slice--other" d="M80.75 0.3A88 88 0 0 1 86.81 0.01L87.19 28.01A60 60 0 0 0 83.06 28.2Z" />
+                  </svg>
+                  <p class="ring__centre" data-layer="Ring centre">
+                    <span class="ring__share">65,8&nbsp;%</span>
+                    <span class="caption">Bydlení</span>
+                  </p>
+                </div>
+                <ol class="legend" data-layer="Legend">
+                  <li class="legend-row" data-layer="Legend row">
+                    <span class="key key--1"></span>
+                    <span class="legend-row__name">Bydlení</span>
+                    <span class="legend-row__amount amount">100&nbsp;800,00&nbsp;Kč</span>
+                    <span class="legend-row__share">65,8&nbsp;%</span>
+                  </li>
+                  <li class="legend-row" data-layer="Legend row">
+                    <span class="key key--2"></span>
+                    <span class="legend-row__name">Jídlo</span>
+                    <span class="legend-row__amount amount">31&nbsp;300,00&nbsp;Kč</span>
+                    <span class="legend-row__share">20,4&nbsp;%</span>
+                  </li>
+                  <li class="legend-row" data-layer="Legend row">
+                    <span class="key key--3"></span>
+                    <span class="legend-row__name">Doprava</span>
+                    <span class="legend-row__amount amount">11&nbsp;700,00&nbsp;Kč</span>
+                    <span class="legend-row__share">7,6&nbsp;%</span>
+                  </li>
+                  <li class="legend-row" data-layer="Legend row">
+                    <span class="key key--4"></span>
+                    <span class="legend-row__name">Zábava</span>
+                    <span class="legend-row__amount amount">5&nbsp;050,00&nbsp;Kč</span>
+                    <span class="legend-row__share">3,3&nbsp;%</span>
+                  </li>
+                  <li class="legend-row" data-layer="Legend row">
+                    <span class="key key--5"></span>
+                    <span class="legend-row__name">Předplatná</span>
+                    <span class="legend-row__amount amount">1&nbsp;968,00&nbsp;Kč</span>
+                    <span class="legend-row__share">1,3&nbsp;%</span>
+                  </li>
+                  <li class="legend-row" data-layer="Legend row / Other">
+                    <span class="key key--other"></span>
+                    <span class="legend-row__name">Ostatní (2)</span>
+                    <span class="legend-row__amount amount">2&nbsp;340,00&nbsp;Kč</span>
+                    <span class="legend-row__share">1,5&nbsp;%</span>
+                  </li>
+                </ol>
+              </div>
+            </article>
+
+            <article class="ring-card" data-layer="Ring card / Income" aria-labelledby="ring-income">
+              <div class="ring-card__head">
+                <div class="ring-card__title">
+                  <h3 id="ring-income">Příjmy za 6 měsíců</h3>
+                  <p class="caption">podle kategorií, CZK</p>
+                </div>
+                <p class="ring-card__total amount">312&nbsp;000,00&nbsp;Kč</p>
+              </div>
+              <div class="ring-card__body">
+                <div class="ring" data-layer="Ring chart">
+                  <svg viewBox="0 0 176 176" role="img" aria-label="Příjmy podle kategorií: Mzda 100 %">
+                    <path class="slice--1" fill-rule="evenodd" d="M88 0A88 88 0 1 1 88 176A88 88 0 1 1 88 0ZM88 28A60 60 0 1 0 88 148A60 60 0 1 0 88 28Z" />
+                  </svg>
+                  <p class="ring__centre" data-layer="Ring centre">
+                    <span class="ring__share">100&nbsp;%</span>
+                    <span class="caption">Mzda</span>
+                  </p>
+                </div>
+                <ol class="legend" data-layer="Legend">
+                  <li class="legend-row" data-layer="Legend row">
+                    <span class="key key--1"></span>
+                    <span class="legend-row__name">Mzda</span>
+                    <span class="legend-row__amount amount">312&nbsp;000,00&nbsp;Kč</span>
+                    <span class="legend-row__share">100,0&nbsp;%</span>
+                  </li>
+                </ol>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+
+      <main class="content" data-layer="Dashboard / Detail">
+        <div class="content__inner">
+          <div class="content__column">
+            <section class="card" data-layer="Month trend" aria-labelledby="trend-title">
+              <div class="card__head">
+                <div class="card__title">
+                  <h2 id="trend-title">Po měsících</h2>
+                  <p class="caption">červen – listopad 2026, CZK za měsíc</p>
+                </div>
+                <ul class="trend-legend" data-layer="Legend">
+                  <li class="trend-legend__item"><span class="swatch-line"></span>Příjmy</li>
+                  <li class="trend-legend__item"><span class="swatch-area swatch-area--expense"></span>Výdaje</li>
+                  <li class="trend-legend__item"><span class="swatch-area swatch-area--gain"></span>Rozdíl</li>
+                </ul>
+              </div>
+              <div class="trend" data-layer="Trend chart">
+                <div class="trend__axis caption" data-layer="Axis / Amount" aria-hidden="true">
+                  <span>60&nbsp;000&nbsp;Kč</span>
+                  <span>40&nbsp;000&nbsp;Kč</span>
+                  <span>20&nbsp;000&nbsp;Kč</span>
+                  <span>0&nbsp;Kč</span>
+                </div>
+                <div class="trend__plot">
+                  <div class="trend__frame">
+                    <svg
+                      viewBox="0 0 600 200"
+                      preserveAspectRatio="none"
+                      role="img"
+                      aria-label="Příjmy, výdaje a rozdíl po měsících, CZK: červen 52 000 / 25 398 / +26 602; červenec 52 000 / 24 338 / +27 662; srpen 52 000 / 23 878 / +28 122; září 52 000 / 24 698 / +27 302; říjen 52 000 / 23 968 / +28 032; listopad 52 000 / 30 878 / +21 122"
+                    >
+                      <path class="trend__grid" vector-effect="non-scaling-stroke" d="M0 0H600M0 66.67H600M0 133.33H600M0 200H600" />
+                      <path class="trend__expense-area" d="M0 115.34C40 116.52 80 118.03 120 118.87C160 119.72 200 120.41 240 120.41C280 120.41 320 117.67 360 117.67C400 117.67 440 120.11 480 120.11C520 120.11 560 104.75 600 97.07L600 200L0 200Z" />
+                      <path class="trend__gain-area" d="M0 26.67H600L600 97.07C560 104.75 520 120.11 480 120.11C440 120.11 400 117.67 360 117.67C320 117.67 280 120.41 240 120.41C200 120.41 160 119.72 120 118.87C80 118.03 40 116.52 0 115.34Z" />
+                      <path class="trend__expense-line" vector-effect="non-scaling-stroke" d="M0 115.34C40 116.52 80 118.03 120 118.87C160 119.72 200 120.41 240 120.41C280 120.41 320 117.67 360 117.67C400 117.67 440 120.11 480 120.11C520 120.11 560 104.75 600 97.07" />
+                      <path class="trend__income-line" vector-effect="non-scaling-stroke" d="M0 26.67H600" />
+                    </svg>
+                  </div>
+                  <div class="trend__months caption" data-layer="Axis / Months">
+                    <span>čvn</span>
+                    <span>čvc</span>
+                    <span>srp</span>
+                    <span>zář</span>
+                    <span>říj</span>
+                    <span>lis</span>
+                  </div>
+                </div>
+              </div>
+              <p class="trend__note caption" data-layer="Trend note">
+                Listopad běží do 30. 11. a počítá i plánovanou platbu Pojištění auta, 8&nbsp;400,00&nbsp;Kč splatnou 24. 11.
+                Proto má nejvyšší výdaje období: 30&nbsp;878,00&nbsp;Kč.
+              </p>
+            </section>
+
+            <section class="card" data-layer="Share list / Income" aria-labelledby="income-list-title">
+              <div class="card__head">
+                <div class="card__title">
+                  <h2 id="income-list-title">Kategorie příjmů</h2>
+                  <p class="caption">za 6 měsíců, CZK, podíl na příjmech</p>
+                </div>
+              </div>
+              <ol class="share-list">
+                <li class="share-row share-row--1" data-layer="Share row">
+                  <div class="share-row__line">
+                    <span class="key key--1"></span>
+                    <span class="share-row__name">Mzda</span>
+                    <span class="share-row__amount amount">312&nbsp;000,00&nbsp;Kč</span>
+                  </div>
+                  <div class="share-row__line">
+                    <span class="share-row__indent"></span>
+                    <span class="bar"><span class="bar__fill" style="--share: 100%"></span></span>
+                    <span class="share-row__shares caption">100,0&nbsp;% příjmů</span>
+                  </div>
+                </li>
+              </ol>
+            </section>
+          </div>
+
+          <section class="card" data-layer="Share list / Expense" aria-labelledby="expense-list-title">
+            <div class="card__head">
+              <div class="card__title">
+                <h2 id="expense-list-title">Kategorie výdajů</h2>
+                <p class="caption">za 6 měsíců, CZK, podíl na výdajích a na příjmech</p>
+              </div>
+            </div>
+            <ol class="share-list">
+              <li class="share-row share-row--1" data-layer="Share row">
+                <div class="share-row__line">
+                  <span class="key key--1"></span>
+                  <span class="share-row__name">Bydlení</span>
+                  <span class="share-row__amount amount">100&nbsp;800,00&nbsp;Kč</span>
+                </div>
+                <div class="share-row__line">
+                  <span class="share-row__indent"></span>
+                  <span class="bar"><span class="bar__fill" style="--share: 65.8%"></span></span>
+                  <span class="share-row__shares caption">65,8&nbsp;% výdajů · 32,3&nbsp;% příjmů</span>
+                </div>
+              </li>
+              <li class="share-row share-row--2" data-layer="Share row">
+                <div class="share-row__line">
+                  <span class="key key--2"></span>
+                  <span class="share-row__name">Jídlo</span>
+                  <span class="share-row__amount amount">31&nbsp;300,00&nbsp;Kč</span>
+                </div>
+                <div class="share-row__line">
+                  <span class="share-row__indent"></span>
+                  <span class="bar"><span class="bar__fill" style="--share: 20.4%"></span></span>
+                  <span class="share-row__shares caption">20,4&nbsp;% výdajů · 10,0&nbsp;% příjmů</span>
+                </div>
+              </li>
+              <li class="share-row share-row--3" data-layer="Share row">
+                <div class="share-row__line">
+                  <span class="key key--3"></span>
+                  <span class="share-row__name">Doprava</span>
+                  <span class="share-row__amount amount">11&nbsp;700,00&nbsp;Kč</span>
+                </div>
+                <div class="share-row__line">
+                  <span class="share-row__indent"></span>
+                  <span class="bar"><span class="bar__fill" style="--share: 7.6%"></span></span>
+                  <span class="share-row__shares caption">7,6&nbsp;% výdajů · 3,8&nbsp;% příjmů</span>
+                </div>
+              </li>
+              <li class="share-row share-row--4" data-layer="Share row">
+                <div class="share-row__line">
+                  <span class="key key--4"></span>
+                  <span class="share-row__name">Zábava</span>
+                  <span class="share-row__amount amount">5&nbsp;050,00&nbsp;Kč</span>
+                </div>
+                <div class="share-row__line">
+                  <span class="share-row__indent"></span>
+                  <span class="bar"><span class="bar__fill" style="--share: 3.3%"></span></span>
+                  <span class="share-row__shares caption">3,3&nbsp;% výdajů · 1,6&nbsp;% příjmů</span>
+                </div>
+              </li>
+              <li class="share-row share-row--5" data-layer="Share row">
+                <div class="share-row__line">
+                  <span class="key key--5"></span>
+                  <span class="share-row__name">Předplatná</span>
+                  <span class="share-row__amount amount">1&nbsp;968,00&nbsp;Kč</span>
+                </div>
+                <div class="share-row__line">
+                  <span class="share-row__indent"></span>
+                  <span class="bar"><span class="bar__fill" style="--share: 1.3%"></span></span>
+                  <span class="share-row__shares caption">1,3&nbsp;% výdajů · 0,6&nbsp;% příjmů</span>
+                </div>
+              </li>
+              <li class="share-row" data-layer="Share row / Other">
+                <div class="share-row__line">
+                  <span class="key key--other"></span>
+                  <span class="share-row__name">Zdraví</span>
+                  <span class="share-row__amount amount">840,00&nbsp;Kč</span>
+                </div>
+                <div class="share-row__line">
+                  <span class="share-row__indent"></span>
+                  <span class="bar"><span class="bar__fill" style="--share: 0.5%"></span></span>
+                  <span class="share-row__shares caption">0,5&nbsp;% výdajů · 0,3&nbsp;% příjmů</span>
+                </div>
+              </li>
+              <li class="share-row" data-layer="Share row / Without category">
+                <div class="share-row__line">
+                  <span class="key key--other"></span>
+                  <span class="share-row__name share-row__name--none">Bez kategorie</span>
+                  <span class="share-row__amount amount">1&nbsp;500,00&nbsp;Kč</span>
+                </div>
+                <div class="share-row__line">
+                  <span class="share-row__indent"></span>
+                  <span class="bar"><span class="bar__fill" style="--share: 1%"></span></span>
+                  <span class="share-row__shares caption">1,0&nbsp;% výdajů · 0,5&nbsp;% příjmů</span>
+                </div>
+              </li>
+            </ol>
+          </section>
+        </div>
+      </main>
+
+      <nav class="tabbar" data-layer="Navigation / Tab bar" aria-label="Hlavní navigace">
+        <a class="nav-item" href="#" aria-current="page" data-layer="Nav item / Current">
+          <span class="tile" data-layer="Icon tile">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" /></svg>
+          </span>
+          Přehled
+        </a>
+        <a class="nav-item" href="#" data-layer="Nav item">
+          <span class="tile" data-layer="Icon tile">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4" /></svg>
+          </span>
+          Transakce
+        </a>
+        <a class="nav-item" href="#" data-layer="Nav item">
+          <span class="tile" data-layer="Icon tile">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h17v12H4a1 1 0 0 1-1-1V6a2 2 0 0 1 2-2h12v3M16 13h1" /></svg>
+          </span>
+          Účty
+        </a>
+        <a class="nav-item" href="#" data-layer="Nav item">
+          <span class="tile" data-layer="Icon tile">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8zM8 8h.01" /></svg>
+          </span>
+          Kategorie
+        </a>
+        <a class="nav-item" href="#" data-layer="Nav item">
+          <span class="tile" data-layer="Icon tile">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M16 5v4M10 15v4" /></svg>
+          </span>
+          Nastavení
+        </a>
+      </nav>
+    </div>
+  </body>
+</html>
