@@ -78,9 +78,12 @@ pnpm format     # prettier write
   distributed **in-repo**: committed here and inherited by scaffolded projects.
 - Subagents (`.claude/agents/`): `reviewer` — read-only code review of a diff, tuned to this
   stack ("review my changes"); `test-writer` — writes vitest specs (Nest services/controllers
-  with `@nestjs/testing`, `@testing-library/react` components), test-files only.
+  with `@nestjs/testing`, `@testing-library/react` components), test-files only;
+  `design-build` — runs design phases 0-3 (direction, tokens, screens, slop gate) in an
+  isolated context, because a full generator run costs several hundred thousand tokens.
 - Commands (`.claude/commands/`): `/scaffold <type> [name]` wraps `turbo gen` (validates type,
-  prerequisites, runs non-interactively); `/review [target]` dispatches the `reviewer` subagent.
+  prerequisites, runs non-interactively); `/review [target]` dispatches the `reviewer` subagent;
+  `/design <target> [--ui <ws>] [--api <ws>,...]` dispatches `design-build`.
 - `coding-conventions` (`.claude/skills/coding-conventions`) captures cross-cutting TypeScript
   conventions (SKILL.md, always-lean) plus per-framework detail loaded on demand
   (`references/{react,react-native,nextjs,nestjs}.md`). It fires when writing/reviewing code and
@@ -98,6 +101,14 @@ pnpm format     # prettier write
   the requester, produces a scoped plan + roadmap, decomposes into tasks, and writes them as GitHub
   issues on the repo's Project (reuse the linked Project or create one). GitHub is the source of
   truth; `references/github.md` holds the `gh` playbook.
+- `design-to-figma` (`.claude/skills/design-to-figma`) — visual direction, design tokens and
+  screens built as Figma-importable HTML, gated by a deterministic slop check. `design/` in git
+  is the source of truth; **Figma is a one-way render of it**. Figma MCP is deliberately not
+  wired (a Starter plan shares a 6-call monthly limit across read and write), so the hand-off is
+  two free plugins: Tokens Studio for variables, html2figma for layers. `/design` resolves two
+  workspaces and confirms both before dispatching: `<ui>` (where output is written) and `<api>`
+  (where the contract and `docs/decisions/` are read). Here that is a future frontend app in
+  `apps/` against `apps/coffra-be` + `packages/coffra-api`.
 - Hooks (`.claude/settings.json`, committed): a `PreToolUse` guard
   (`.claude/hooks/guard-generated.mjs`) blocks `Write`/`Edit` into generated/build output
   (`dist/`, `build/`, `.next/`, `.turbo/`, `coverage/`, `*.tsbuildinfo`, prisma `generated/`,

@@ -7,8 +7,9 @@ description: Use when planning a project or a major feature from a brief — tur
 
 Turns a project/feature brief into an actionable, tracked plan. Runs **interactively in the main
 thread**: it asks the requester when the brief is thin, then plans, decomposes into tasks, and
-writes them to **GitHub — the single source of truth** (nothing is committed to the repo). It
-reuses a Project already linked to the repo, or creates one.
+writes the tasks to **GitHub — the single source of truth for tracking**. It reuses a Project
+already linked to the repo, or creates one. The approved plan itself is saved as markdown in a
+`docs/plans/` folder chosen by scope (see "Where plans are saved"). The skill never commits it.
 
 Run the phases **in order**. Don't jump to tasks before scope is agreed; don't create anything in
 GitHub before the plan and the task list are confirmed.
@@ -30,6 +31,8 @@ Ground yourself so you don't ask what the repo already answers:
 
 - Read `CLAUDE.md` (root + per-app), `package.json`(s), which apps/packages/templates exist, the
   stack, and any existing issues/Project.
+- Decide the **scope**: does the plan touch one app (or package), or several workspaces / shared
+  tooling? It picks the folder the plan is saved to (see "Where plans are saved").
 - Restate the goal in one–two sentences to confirm understanding.
 
 ## Phase 2 — Clarify (fill the gaps)
@@ -61,7 +64,25 @@ Produce and present for approval:
 - **Roadmap** — the path from now to the goal; dependencies between phases.
 - **Risks / open questions** — with mitigations.
 
-Keep it tight and concrete to this repo's stack. Get an explicit "yes" before Phase 4.
+Keep it tight and concrete to this repo's stack. Get an explicit "yes" before Phase 4. After the
+"yes", save the plan as a file (see below) — don't leave it only in chat.
+
+### Where plans are saved
+
+The scope from Phase 1 decides the folder:
+
+| Plan scope | Folder |
+|---|---|
+| One app, e.g. a feature or task in `apps/coffra-be` | `apps/<name>/docs/plans/` |
+| One package | `packages/<name>/docs/plans/` |
+| Whole repo: several workspaces, shared tooling, project roadmap | `<repo root>/docs/plans/` |
+
+- A plan that touches two or more workspaces goes to the repo root.
+- File name: `<id>-<slug>.md` (e.g. `T14-accounts-crud.md`). Create the folder when it is missing.
+- Write the file in the requester's language. Link the GitHub issue and, for app plans, the app's
+  `docs/decisions/` entries it relies on.
+- The file holds goal, scope, milestones and approach. The tasks stay in GitHub issues (Phase 5).
+- Save the file right after approval. `**/docs/plans/` is in `.gitignore`, so plans stay local and are never committed.
 
 ## Phase 4 — Decompose into tasks
 
@@ -107,4 +128,5 @@ offer to create everything once access is set up — don't silently drop the tra
 | One giant "build the app" task | milestone → ~0.5–2d tasks |
 | Creating issues before the plan is approved | approve plan → approve tasks → write |
 | Creating a second Project when one is linked | reuse the linked Project |
+| Saving an app plan to root `docs/plans/` | one-app plan → `apps/<name>/docs/plans/` |
 | Assuming `gh` has the scope | `gh auth status`; `gh auth refresh -s project` |

@@ -51,3 +51,18 @@ yarn-error.log*
 *.pem
 
 /docs
+**/docs/plans/
+
+# External design tooling (dependencies, not copies — install per project, never commit)
+.agents/skills/
+.claude/skills/taste-skill/
+.claude/skills/impeccable/
+.claude/skills/designlang/
+.claude/skills/transitions*/
+.claude/skills/gsap-*/
+
+# design-to-figma output (regenerable). brief.md, DESIGN.md and screens/ ARE committed.
+# Unanchored: brief/screens/reports are scoped to a workspace (apps/<name>/design/, ...).
+.taste-skill/
+**/design/tokens/
+**/design/reports/**/*.png
