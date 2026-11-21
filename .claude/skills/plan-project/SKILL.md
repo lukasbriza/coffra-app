@@ -73,7 +73,7 @@ The scope from Phase 1 decides the folder:
 
 | Plan scope | Folder |
 |---|---|
-| One app, e.g. a feature or task in `apps/coffra-be` | `apps/<name>/docs/plans/` |
+| One app: a feature or task inside `apps/<name>` | `apps/<name>/docs/plans/` |
 | One package | `packages/<name>/docs/plans/` |
 | Whole repo: several workspaces, shared tooling, project roadmap | `<repo root>/docs/plans/` |
 
