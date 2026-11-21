@@ -7,7 +7,7 @@ export const palette = colorDefinition.map(({ key, title, colors }) => ({
 }))
 
 export const usage = `
-import { ThemeProvider } from '@lukasbriza/theme';
+import { ThemeProvider } from '@lukasbriza/coffra-theme';
 
 const App = () => (
   <ThemeProvider>

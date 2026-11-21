@@ -1,11 +1,11 @@
-# CLAUDE.md — styles package (@lukasbriza/styles)
+# CLAUDE.md — styles package (@lukasbriza/coffra-styles)
 
 Themed `styled` helper + prop utilities on top of MUI. Inherits root `CLAUDE.md`.
 
 ## Stack
 
 - MUI system/styled-engine + emotion, React 18. Built as a library (`dist/`).
-- Depends on `@lukasbriza/theme` (`workspace:*`) — theme must exist first.
+- Depends on `@lukasbriza/coffra-theme` (`workspace:*`) — theme must exist first.
 
 ## Surface (`src/index.ts`)
 

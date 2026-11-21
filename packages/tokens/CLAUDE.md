@@ -1,4 +1,4 @@
-# CLAUDE.md — tokens package (@lukasbriza/tokens)
+# CLAUDE.md — tokens package (@lukasbriza/coffra-tokens)
 
 Framework-free design tokens. Inherits root `CLAUDE.md`.
 
@@ -10,7 +10,7 @@ Framework-free design tokens. Inherits root `CLAUDE.md`.
 ## Surface (`src/index.ts`)
 
 - `palette` (+ `mono`, `state`, `black`/`white`/`gray`) — the template's colours, still read by
-  `@lukasbriza/theme`; not part of the Coffra design.
+  `@lukasbriza/coffra-theme`; not part of the Coffra design.
 - `color` — the Coffra design's colour roles (`bg`, `text`, `accent`, `amount`, `band`, `chart`).
 - `spacing(steps)` + `radius` + `borderWidth` — 4px grid, corner radii, stroke widths.
 - `size` — fixed layout sizes; `breakpoint` — where the web layout changes.
@@ -20,7 +20,7 @@ Framework-free design tokens. Inherits root `CLAUDE.md`.
 ## Why it exists
 
 Single source of truth for design values. **Colours are shared across platforms** — the web MUI
-theme (`@lukasbriza/theme`) and the mobile `@emotion/native` theme both compose their palette from
+theme (`@lukasbriza/coffra-theme`) and the mobile `@emotion/native` theme both compose their palette from
 `palette`/`mono`/`state`, so brand colours are defined once. The `spacing`/`radius`/`fontSize`/
 `fontWeight` scales are the **mobile baseline**; the web theme keeps its own rem/MUI type scale and
 spacing unit (they differ by design). If a scale ever converges across platforms, move it here too.

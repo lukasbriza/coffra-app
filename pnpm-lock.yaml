@@ -299,15 +299,15 @@ importers:
 
   packages/components:
     dependencies:
+      '@lukasbriza/coffra-styles':
+        specifier: workspace:*
+        version: link:../styles
+      '@lukasbriza/coffra-theme':
+        specifier: workspace:*
+        version: link:../theme
       '@lukasbriza/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@lukasbriza/styles':
-        specifier: workspace:*
-        version: link:../../templates/package-styles
-      '@lukasbriza/theme':
-        specifier: workspace:*
-        version: link:../../templates/package-theme
       '@lukasbriza/ts-config':
         specifier: workspace:*
         version: link:../ts-config
@@ -479,9 +479,9 @@ importers:
       '@emotion/styled':
         specifier: 11.14.1
         version: 11.14.1(@emotion/react@11.14.0(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react@19.2.7)
-      '@lukasbriza/theme':
+      '@lukasbriza/coffra-theme':
         specifier: workspace:*
-        version: link:../../templates/package-theme
+        version: link:../theme
       '@mui/material':
         specifier: 9.2.0
         version: 9.2.0(@emotion/react@11.14.0(@types/react@19.2.17)(react@19.2.7))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -522,12 +522,12 @@ importers:
 
   packages/theme:
     dependencies:
+      '@lukasbriza/coffra-tokens':
+        specifier: workspace:*
+        version: link:../tokens
       '@lukasbriza/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@lukasbriza/tokens':
-        specifier: workspace:*
-        version: link:../../templates/package-tokens
       '@lukasbriza/ts-config':
         specifier: workspace:*
         version: link:../ts-config

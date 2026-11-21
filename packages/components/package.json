@@ -1,5 +1,5 @@
 {
-  "name": "@lukasbriza/components",
+  "name": "@lukasbriza/coffra-components",
   "version": "0.0.0",
   "private": true,
   "sideEffects": false,
@@ -31,9 +31,9 @@
     "ts": "tsc --build tsconfig.json"
   },
   "dependencies": {
+    "@lukasbriza/coffra-styles": "workspace:*",
+    "@lukasbriza/coffra-theme": "workspace:*",
     "@lukasbriza/eslint-config": "workspace:*",
-    "@lukasbriza/styles": "workspace:*",
-    "@lukasbriza/theme": "workspace:*",
     "@lukasbriza/ts-config": "workspace:*",
     "@mui/material": "9.2.0",
     "@mui/system": "9.2.0",

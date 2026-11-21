@@ -39,13 +39,20 @@ pnpm turbo gen package-components  # component library       -> packages/compone
 Shared logic packages (`tokens`, `api`) are the DRY home for cross-app code: design tokens
 (consumed by the web theme and the mobile theme) and the typed `$api` (consumed by every app via
 a small per-app `lib/api.ts` that supplies the env baseUrl). Apps that use them depend on
-`@lukasbriza/api` / `@lukasbriza/tokens` (`workspace:*`), so scaffold those packages first.
+the API and tokens packages (`workspace:*`), so scaffold those packages first.
 
 **In this project the API package is `@lukasbriza/coffra-api`** (`packages/coffra-api`, from `package-api`, the
 contract of `apps/coffra-be`), not `@lukasbriza/api`: the template is a workspace of that name, and two workspaces of
 one name make turbo fail. An app scaffolded from `app-react`, `app-next` or `app-mobile` switches its dependency, its
 `lib/api.ts` import and its `CLAUDE.md` to `@lukasbriza/coffra-api` (see `packages/coffra-api/CLAUDE.md`). The other
 `package-*` generators have the same collision: give the copy a name of its own before `pnpm install`.
+
+**The theme system copies are named the same way:** `packages/tokens` is `@lukasbriza/coffra-tokens`, `packages/theme`
+is `@lukasbriza/coffra-theme`, `packages/styles` is `@lukasbriza/coffra-styles` and `packages/components` is
+`@lukasbriza/coffra-components`. The folders keep the template names (`design/tokens.config.json` reads
+`packages/tokens/dist/index.js`). Skills in `.claude/` and the generators in `turbo/generators/` come from the template
+and still say `tokens`, `theme`, `styles` and `components`; in this repo read them as the `coffra-*` package. A new
+`app-storybook` copy is named `@lukasbriza/coffra-storybook` and imports `@lukasbriza/coffra-theme`.
 
 - `templates/<type>/` holds the **canonical, real** project body (single source of
   truth). Generators copy it into `apps/`/`packages/` and post-process (rename, optional

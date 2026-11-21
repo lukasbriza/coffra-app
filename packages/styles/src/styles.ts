@@ -1,7 +1,7 @@
 'use client'
 
-import { webTheme as defaultTheme } from '@lukasbriza/theme'
-import type { WebTheme } from '@lukasbriza/theme'
+import { webTheme as defaultTheme } from '@lukasbriza/coffra-theme'
+import type { WebTheme } from '@lukasbriza/coffra-theme'
 import type { CreateMUIStyled } from '@mui/styled-engine'
 import type { MUIStyledCommonProps, MuiStyledOptions } from '@mui/system'
 import { createStyled } from '@mui/system'

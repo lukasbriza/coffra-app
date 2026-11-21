@@ -13,6 +13,6 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Support
 @mui,
 @emotion,
-@lukasbriza/theme - need to be uncommented,
+@lukasbriza/coffra-theme - need to be uncommented,
 openapi-fetch
 i18n

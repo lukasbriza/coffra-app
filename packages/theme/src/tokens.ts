@@ -1,10 +1,10 @@
-import { black, gray, mono, state, white } from '@lukasbriza/tokens'
+import { black, gray, mono, state, white } from '@lukasbriza/coffra-tokens'
 import type { PaletteOptions, Shape } from '@mui/material/styles'
 import type { SpacingOptions } from '@mui/system'
 import { createBreakpoints } from '@mui/system'
 
 // --- colors ---
-// Raw brand colours come from the shared, framework-free `@lukasbriza/tokens`
+// Raw brand colours come from the shared, framework-free `@lukasbriza/coffra-tokens`
 // (the single source of truth used by web AND mobile). Everything below is the
 // web/MUI-specific *composition* of those primitives. Type scale, spacing and
 // breakpoints stay here — they're web-specific (rem/MUI variants) and differ from
@@ -82,4 +82,4 @@ export const sizeStep = 5
 
 export const size = Object.fromEntries(Array.from({ length: 33 }, (_, index) => [`size${index}`, index * sizeStep]))
 
-export { black, gray, white } from '@lukasbriza/tokens'
+export { black, gray, white } from '@lukasbriza/coffra-tokens'
