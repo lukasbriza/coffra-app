@@ -8,8 +8,8 @@
 // Writes <out>/<name>-<width>.png. Default out is the screen's sibling
 // ../reports/<name>/ so the report is self-contained.
 
-// A CLI: the console is its output.
-/* eslint-disable no-console */
+/* eslint-disable no-console --
+   Standalone CLI script, not a turbo task: console is its output. */
 
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -19,6 +19,8 @@ import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 
 import { findChrome } from './lib/find-chrome.mjs'
+
+const { basename, dirname, extname, resolve, join } = path
 
 const run = promisify(execFile)
 
@@ -35,19 +37,19 @@ const fail = (m) => {
 const input = process.argv[2]
 if (!input || input.startsWith('--')) fail('Usage: shoot.mjs <file.html> [--out <dir>] [--widths 1440,768,390]')
 
-const file = path.resolve(input)
+const file = resolve(input)
 if (!existsSync(file)) fail(`No such file: ${file}`)
 
 const chrome = findChrome()
 if (!chrome) fail('No Chromium-family browser found. Install one, or set CHROME_PATH.')
 
-const name = path.basename(file, path.extname(file))
+const name = basename(file, extname(file))
 const widths = String(flag('widths', '1440,768,390'))
   .split(',')
   .map((w) => Number(w.trim()))
   .filter(Boolean)
 const height = Number(flag('height', 1200))
-const outDir = path.resolve(flag('out', path.join(path.dirname(file), '..', 'reports', name)))
+const outDir = resolve(flag('out', join(dirname(file), '..', 'reports', name)))
 
 if (widths.length === 0) fail('No valid widths.')
 
@@ -55,7 +57,7 @@ await mkdir(outDir, { recursive: true })
 
 const written = []
 for (const width of widths) {
-  const out = path.join(outDir, `${name}-${width}.png`)
+  const out = join(outDir, `${name}-${width}.png`)
   try {
     await run(
       chrome,

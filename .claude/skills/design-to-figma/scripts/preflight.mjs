@@ -7,9 +7,8 @@
 // Run from the repo root. Reads nothing outside the repo except the browser/tool locations
 // it is looking for. Installs nothing.
 
-// A CLI report: the console is its output, and the env vars are machine-local tool locations,
-// not inputs of a turbo task.
-/* eslint-disable no-console, turbo/no-undeclared-env-vars */
+/* eslint-disable no-console, turbo/no-undeclared-env-vars --
+   Standalone CLI script, not a turbo task: console is its output, env vars are OS lookups. */
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -17,6 +16,8 @@ import { homedir } from 'node:os'
 import path from 'node:path'
 
 import { findChrome } from './lib/find-chrome.mjs'
+
+const { join, relative, resolve } = path
 
 const WIN = process.platform === 'win32'
 const MAC = process.platform === 'darwin'
@@ -67,11 +68,11 @@ add(
 
 // ---------------------------------------------------------------- required: the generator
 const skillRoots = [
-  path.resolve('.claude/skills'),
-  path.resolve('.agents/skills'),
-  path.join(homedir(), '.claude/skills'),
-  path.join(homedir(), '.agents/skills'),
-  path.join(homedir(), '.claude/plugins'),
+  resolve('.claude/skills'),
+  resolve('.agents/skills'),
+  join(homedir(), '.claude/skills'),
+  join(homedir(), '.agents/skills'),
+  join(homedir(), '.claude/plugins'),
 ]
 const findDir = (root, wanted, depth = 3) => {
   if (depth === 0 || !existsSync(root)) return null
@@ -83,7 +84,7 @@ const findDir = (root, wanted, depth = 3) => {
   }
   for (const e of entries) {
     if (!e.isDirectory()) continue
-    const full = path.join(root, e.name)
+    const full = join(root, e.name)
     if (e.name === wanted) return full
     const deeper = findDir(full, wanted, depth - 1)
     if (deeper) return deeper
@@ -99,7 +100,7 @@ const findFile = (root, wanted, depth = 4) => {
     return null
   }
   for (const e of entries) {
-    const full = path.join(root, e.name)
+    const full = join(root, e.name)
     if (e.isFile() && e.name === wanted) return full
     if (e.isDirectory()) {
       const deeper = findFile(full, wanted, depth - 1)
@@ -137,12 +138,12 @@ add(
   'nothing to install; do NOT run `pnpm dlx impeccable install`',
 )
 
-const playwrightRoot = () => {
-  if (WIN) return path.join(process.env.LOCALAPPDATA ?? '', 'ms-playwright')
-  if (MAC) return path.join(homedir(), 'Library/Caches/ms-playwright')
-  return path.join(homedir(), '.cache/ms-playwright')
+const getPlaywrightRoot = () => {
+  if (WIN) return join(process.env.LOCALAPPDATA ?? '', 'ms-playwright')
+  if (MAC) return join(homedir(), 'Library/Caches/ms-playwright')
+  return join(homedir(), '.cache/ms-playwright')
 }
-const pwRoot = playwrightRoot()
+const pwRoot = getPlaywrightRoot()
 const pw = existsSync(pwRoot)
 add(
   'optional',
@@ -161,16 +162,16 @@ const readJson = (p) => {
   }
 }
 
-const cfg = readJson(path.resolve('design/tokens.config.json'))
-let tokensEntry = cfg?.entry ? path.resolve(cfg.entry) : null
+const cfg = readJson(resolve('design/tokens.config.json'))
+let tokensEntry = cfg?.entry ? resolve(cfg.entry) : null
 let tokensPkg = null
-if (!tokensEntry && existsSync(path.resolve('packages'))) {
-  for (const d of readdirSync(path.resolve('packages'), { withFileTypes: true })) {
+if (!tokensEntry && existsSync(resolve('packages'))) {
+  for (const d of readdirSync(resolve('packages'), { withFileTypes: true })) {
     if (!d.isDirectory()) continue
-    const pkg = readJson(path.resolve('packages', d.name, 'package.json'))
+    const pkg = readJson(resolve('packages', d.name, 'package.json'))
     if (pkg?.name?.endsWith('tokens') || d.name.endsWith('tokens')) {
       tokensPkg = d.name
-      tokensEntry = path.resolve('packages', d.name, 'dist/index.js')
+      tokensEntry = resolve('packages', d.name, 'dist/index.js')
       break
     }
   }
@@ -180,9 +181,7 @@ add(
   'project',
   'tokens package',
   Boolean(tokensEntry),
-  tokensEntry
-    ? `${path.relative(process.cwd(), tokensEntry)}${tokensBuilt ? ' (built)' : ' — NOT BUILT'}`
-    : 'not found',
+  tokensEntry ? `${relative(process.cwd(), tokensEntry)}${tokensBuilt ? ' (built)' : ' — NOT BUILT'}` : 'not found',
   tokensEntry ? 'pnpm --filter <tokens package> build' : 'pnpm turbo gen package-tokens — phase 1 can do this',
 )
 
@@ -194,7 +193,7 @@ add(
   `write it once; mandatory if your tokens package is not packages/tokens${tokensPkg && tokensPkg !== 'tokens' ? ` (yours is packages/${tokensPkg})` : ''}`,
 )
 
-const design = existsSync(path.resolve('design/DESIGN.md'))
+const design = existsSync(resolve('design/DESIGN.md'))
 add(
   'project',
   'design/DESIGN.md',
@@ -224,8 +223,9 @@ for (const group of ['required', 'no install needed', 'landing pages only', 'opt
   console.log(LABEL[group])
   for (const c of rows) {
     // Only REQUIRED can fail the run; elsewhere a false check is a note, not a problem.
-    const failMark = group === 'required' ? 'MISSING' : 'NOTE   '
-    const mark = c.ok ? 'OK     ' : failMark
+    let mark = 'NOTE   '
+    if (c.ok) mark = 'OK     '
+    else if (group === 'required') mark = 'MISSING'
     console.log(`  ${mark}  ${c.name.padEnd(26)} ${c.detail}`)
     if (!c.ok && c.fix) console.log(`             ${group === 'required' ? 'fix' : 'note'}: ${c.fix}`)
   }
