@@ -7,6 +7,7 @@ ingress:
 env:
   OIDC_ISSUER_URL: "https://auth.lukasbriza.eu/realms/homeport-test"
   OIDC_CLIENT_ID: "coffra-be"
+  SWAGGER_ENABLED: "true"
 infisical:
   enabled: true
   projectId: "701566fc-6192-4ca5-b01b-b9e5a4c31214"
