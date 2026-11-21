@@ -19,6 +19,7 @@
     "docker:dev": "docker compose -f docker/dev/docker-compose.yaml run --rm --service-ports dev sh -c \"pnpm install && exec bash\"",
     "docker:shell": "docker compose -f docker/dev/docker-compose.yaml run --rm --service-ports dev bash",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "gen": "gen run",
     "lint": "turbo run lint --no-daemon",
     "lint:fix": "turbo run lint:fix --no-daemon",
     "prepare": "node scripts/husky-prepare.js",
