@@ -9,10 +9,14 @@ covers only what is specific to a Next.js app.
 - i18n: `next-international` (`src/i18n`), locale segment `src/app/[locale]`.
 - Styling: MUI + `@emotion` with an SSR registry (`src/layout/registry`).
 - Forms: `react-hook-form` + `yup` (`@hookform/resolvers`).
-- API: shared **`@lukasbriza/api`** (`$api`), bound to the baseUrl once in `src/lib/api.ts`.
-- Data/state: **TanStack Query** with RSC hydration (`src/lib/query`) for server data;
+- API: **`@lukasbriza/coffra-api`** (the contract of `apps/coffra-be`), bound once on the server in
+  `src/lib/api.ts` (`getApi()`). The browser never calls the API.
+- Data/state: server components fetch the data and pass it down as props. **TanStack Query**
+  (`src/lib/query`) is wired but unused for now; whether it stays is decided with the login.
   **Zustand** (SSR-safe provider, `src/stores`) for shared client UI state.
-- Public env: `NEXT_PUBLIC_*` vars, read via `process.env` (inlined at build time).
+- Env: server-only vars (`API_BASE_URL`) validated in `src/lib/env` and at server start
+  (`src/instrumentation.ts`); public `NEXT_PUBLIC_*` vars read via `process.env` (inlined at build time).
+- Dev: this app runs on port **3001**; `coffra-be` runs locally on 3000 and the web calls it.
 
 ## Project structure — where things go
 
@@ -26,7 +30,8 @@ implementation in a module. No logic lives in `app/`.
 | `src/components/` | components shared across features (add when the first shared one appears) |
 | `src/hooks/` | hooks shared across features |
 | `src/layout/` | root/web layouts + emotion SSR `registry/`; wraps the app in `QueryProvider` + `UiStoreProvider` |
-| `src/lib/` | `api.ts` (binds `@lukasbriza/api` → `$api`), `query/` (TanStack Query client + provider) |
+| `src/lib/` | `api.ts` (`getApi()`: `@lukasbriza/coffra-api` bound to `API_BASE_URL`, `server-only`), `env/` (server env, validated), `query/` (TanStack Query client + provider) |
+| `src/instrumentation.ts` | `register()`: validates the server env when the server starts |
 | `src/stores/` | Zustand stores (SSR-safe factory + provider + selector hook) |
 | `src/i18n/` | `next-international` config, `client`, `server`, `locales/` |
 | `src/shared/` | shared types |
@@ -34,7 +39,7 @@ implementation in a module. No logic lives in `app/`.
 Rules:
 
 - A route file re-exports from its module: `app/[locale]/(web)/page.ts` →
-  `@/modules/home/page`, `error.ts` → `@/modules/home/error`, etc.
+  `@/modules/dashboard/page`, `error.ts` → `@/modules/dashboard/error`, etc.
 - Feature-local components/hooks live in `modules/<feature>/components` and `/hooks`. Promote to
   `src/components` / `src/hooks` only when a **second** feature needs them.
 - A module's `index.ts` is its public API for *other modules*; route files import route entries
@@ -66,20 +71,29 @@ Rules:
 
 ## API client
 
-- The typed `$api` comes from the shared **`@lukasbriza/api`** package (schema lives there).
-  `src/lib/api.ts` binds it to the baseUrl (`NEXT_PUBLIC_API_BASE_URL`); import `$api` from `@/lib/api`.
-- `$api` gives typed TanStack Query hooks. Prefer **RSC prefetch +
-  `HydrationBoundary`** (reference: `modules/home/page.tsx`) so data ships in the initial HTML.
-  State-management decision tree + SSR-safe Zustand pattern live in the `coding-conventions`
-  skill (`references/nextjs.md`).
+- The typed client comes from **`@lukasbriza/coffra-api`** (schema lives there, see
+  `packages/coffra-api/CLAUDE.md`), not from the template's API package (Cat Facts schema).
+- **Server only.** `src/lib/api.ts` starts with `import 'server-only'`; importing it from a client
+  component fails the build. Call `getApi().fetchClient` in a server component and pass the result
+  down as props. The browser has neither `API_BASE_URL` nor a token, and `coffra-be` needs no CORS
+  origin for the web.
+- `getApi()` creates the client on first use, so `next build` (which imports page modules) reads no
+  env and builds without `API_BASE_URL`.
+- **Deviation from the `coding-conventions` skill** (`references/nextjs.md`) and the template: no
+  `NEXT_PUBLIC_API_BASE_URL` / `next-runtime-env`, no RSC prefetch + `HydrationBoundary` with client
+  `$api` hooks. A client `useQuery` would call the API from the browser after hydration, which has no
+  token. Do not reintroduce them here.
 
 ## Env
 
 - Copy `.env.example` → `.env.local` and fill values. `.env.local` is gitignored and
   must never be committed.
+- `API_BASE_URL` (required by `next dev` / `next start`): origin of the coffra API without a path
+  (`http://localhost:3000`). Server only, never `NEXT_PUBLIC_`. Invalid or missing: the server logs
+  the reason at start and answers 500. Declared as `passThroughEnv` of `dev` in `turbo.json`.
 
 ## Don't touch
 
-- Generated: `.next/`, `next-env.d.ts`. API schema types live in `@lukasbriza/api`.
+- Generated: `.next/`, `next-env.d.ts`. API schema types live in `@lukasbriza/coffra-api`.
 - This file ships from `templates/app-next/CLAUDE.md`; edit conventions there, not in
   scaffolded copies, so changes propagate via `turbo gen` / `sync-template`.

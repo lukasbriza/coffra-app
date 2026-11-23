@@ -2,6 +2,9 @@
   "$schema": "https://turbo.build/schema.json",
   "extends": ["//"],
   "tasks": {
+    "dev": {
+      "passThroughEnv": ["API_BASE_URL"]
+    },
     "lint:fix": {
       "dependsOn": ["^build"],
       "outputs": [".eslintcache"]

@@ -210,9 +210,9 @@ importers:
       '@hookform/resolvers':
         specifier: 5.4.0
         version: 5.4.0(react-hook-form@7.81.0(react@19.2.7))
-      '@lukasbriza/api':
+      '@lukasbriza/coffra-api':
         specifier: workspace:*
-        version: link:../../templates/package-api
+        version: link:../../packages/coffra-api
       '@tanstack/react-query':
         specifier: 5.101.2
         version: 5.101.2(react@19.2.7)
@@ -234,6 +234,9 @@ importers:
       react-hook-form:
         specifier: 7.81.0
         version: 7.81.0(react@19.2.7)
+      server-only:
+        specifier: 0.0.1
+        version: 0.0.1
       usehooks-ts:
         specifier: 3.1.1
         version: 3.1.1(react@19.2.7)

@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 3001",
     "build": "next build",
     "lint": "eslint --cache .",
     "lint:fix": "pnpm run lint --fix",
-    "start": "next start -p 3000"
+    "start": "next start -p 3001"
   },
   "dependencies": {
     "@emotion/cache": "11.14.0",
@@ -16,7 +16,7 @@
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@hookform/resolvers": "5.4.0",
-    "@lukasbriza/api": "workspace:*",
+    "@lukasbriza/coffra-api": "workspace:*",
     "@tanstack/react-query": "5.101.2",
     "@tanstack/react-query-devtools": "5.101.2",
     "next": "16.2.10",
@@ -24,6 +24,7 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-hook-form": "7.81.0",
+    "server-only": "0.0.1",
     "usehooks-ts": "3.1.1",
     "yup": "1.7.1",
     "zustand": "5.0.14"
