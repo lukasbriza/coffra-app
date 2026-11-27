@@ -1,57 +1,64 @@
+import { fontSize, fontWeight, letterSpacing, lineHeight } from '@lukasbriza/coffra-tokens'
 import type { TypographyStyle, TypographyVariantsOptions } from '@mui/material/styles'
 
-import { breakpoints } from './tokens'
+import { DISABLED_VARIANTS, FONT_FAMILY, HTML_FONT_SIZE } from './constants'
+import type { DesignVariant, FontWeightName, LetterSpacingName } from './types'
 
-// --- font style ---
-export const fontFamily = 'Poppins, Arial, sans-serif'
-export const headingsFontFamily = 'JetBrains Mono, monospace'
-export const htmlFontSize = 10 // 62.5% of the default 16px
-export const fontWeightRegular = 400
-export const fontWeightMedium = 500
-export const fontWeightBold = 700
+/**
+ * Converts a pixel value of the tokens to `rem`, so the type scale follows the reader's browser font size.
+ *
+ * @param px - the token value in pixels
+ * @returns the same size in `rem`
+ */
+const toRem = (px: number): string => `${px / HTML_FONT_SIZE}rem`
 
-// --- variants ---
-export const variants: TypographyVariantsOptions = {
-  h1: {
-    fontFamily: headingsFontFamily,
-    fontSize: 48,
-    lineHeight: 1.33333,
-    [breakpoints.down('md')]: { fontSize: 24, lineHeight: 1.33333 },
-  },
-  h2: {
-    fontFamily: headingsFontFamily,
-    fontSize: 32,
-    lineHeight: 1.5,
-    [breakpoints.down('md')]: { fontSize: 20, lineHeight: 1.4 },
-  },
-  h3: {
-    fontFamily: headingsFontFamily,
-    fontSize: 24,
-    lineHeight: 1.33333,
-    [breakpoints.down('md')]: { fontSize: 16, lineHeight: 1.5 },
-  },
-  h4: { fontFamily: headingsFontFamily, fontSize: 20, lineHeight: 1.4 },
-  h5: { fontFamily: headingsFontFamily, fontSize: 16, lineHeight: 1.5 },
-  S: { fontSize: 12, lineHeight: 1.33333 },
-  M: { fontSize: 14, lineHeight: 1.42857 },
-  L: { fontSize: 16, lineHeight: 1.5 },
-  XL: { fontSize: 18, lineHeight: 1.77778 },
-  // Disable unwanted built-in variants
-  h6: undefined as unknown as TypographyStyle,
-  body1: undefined as unknown as TypographyStyle,
-  body2: undefined as unknown as TypographyStyle,
-  button: undefined as unknown as TypographyStyle,
-  caption: undefined as unknown as TypographyStyle,
-  overline: undefined as unknown as TypographyStyle,
-  subtitle1: undefined as unknown as TypographyStyle,
-  subtitle2: undefined as unknown as TypographyStyle,
+/**
+ * Builds one typography variant from the tokens of the same name.
+ *
+ * @param name - the variant, which is also the key of its `fontSize` and `lineHeight` tokens
+ * @param weight - the weight the variant has by default; a component may set another one from the theme
+ * @param tracking - the letter spacing of the variant
+ * @returns the CSS of the variant
+ */
+const buildVariant = (name: DesignVariant, weight: FontWeightName, tracking: LetterSpacingName): TypographyStyle => ({
+  fontFamily: FONT_FAMILY,
+  fontSize: toRem(fontSize[name]),
+  lineHeight: toRem(lineHeight[name]),
+  letterSpacing: `${letterSpacing[tracking]}px`,
+  fontWeight: Number(fontWeight[weight]),
+})
+
+/**
+ * Typography variants of the design, one per `fontSize` token. The default weight and letter spacing of each follow
+ * `design/DESIGN.md`: figures, headings and the title bold, labels semibold, the display tight, the title, figures and
+ * the narrow display snug.
+ */
+export const variants: Record<DesignVariant, TypographyStyle> = {
+  caption: buildVariant('caption', 'regular', 'normal'),
+  label: buildVariant('label', 'semibold', 'normal'),
+  body: buildVariant('body', 'regular', 'normal'),
+  heading: buildVariant('heading', 'bold', 'normal'),
+  figure: buildVariant('figure', 'bold', 'snug'),
+  title: buildVariant('title', 'bold', 'snug'),
+  displayNarrow: buildVariant('displayNarrow', 'bold', 'snug'),
+  display: buildVariant('display', 'bold', 'tight'),
 }
 
+const disabledVariants: Partial<Record<(typeof DISABLED_VARIANTS)[number], TypographyStyle>> = Object.fromEntries(
+  DISABLED_VARIANTS.map((name) => [name, undefined]),
+)
+
+/**
+ * Typography options of the theme: the font stack, the four weights of the design, the design's variants and MUI's
+ * built-in variants switched off.
+ */
 export const typography: TypographyVariantsOptions = {
-  fontFamily,
-  htmlFontSize,
-  fontWeightRegular,
-  fontWeightMedium,
-  fontWeightBold,
+  fontFamily: FONT_FAMILY,
+  htmlFontSize: HTML_FONT_SIZE,
+  fontWeightRegular: Number(fontWeight.regular),
+  fontWeightMedium: Number(fontWeight.medium),
+  fontWeightSemibold: Number(fontWeight.semibold),
+  fontWeightBold: Number(fontWeight.bold),
+  ...disabledVariants,
   ...variants,
 }

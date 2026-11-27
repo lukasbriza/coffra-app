@@ -29,6 +29,7 @@
     "lint": "eslint --cache .",
     "lint:fix": "pnpm run lint --fix",
     "qa": "run-p ts format lint",
+    "test": "vitest run",
     "ts": "tsc --build tsconfig.json"
   },
   "dependencies": {
@@ -51,6 +52,7 @@
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "storybook": "10.4.6",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
   }
 }
