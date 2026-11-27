@@ -1,49 +1,24 @@
+import { fontSize, lineHeight } from '@lukasbriza/coffra-tokens'
 import { Typography } from '@mui/material'
 import { Stack } from '@mui/system'
-import { Typeset } from '@storybook/addon-docs/blocks'
 
-import { brandColors } from '../src/tokens'
-import { fontFamily, fontWeightBold, fontWeightRegular, headingsFontFamily } from '../src/typography'
+import { webTheme } from '../src/web-theme'
 
 import { variantsDefinition } from './font-variants'
 
-const headingText = 'Typography text'
-const bodyText =
-  'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Sed vel lectus. Donec odio tempus molestie, porttitor ut, iaculis quis, sem.'
+const sampleText = 'Net for 6 months: +158,842.00 CZK'
 
-const fontSizeToPx = (fontSize: number) => `${fontSize}px`
-
-const headings = [variantsDefinition.h1, variantsDefinition.h2, variantsDefinition.h3, variantsDefinition.h4]
-
-const texts = [variantsDefinition.S, variantsDefinition.M, variantsDefinition.L, variantsDefinition.XL]
-const textColor = brandColors.bodyText.primary
-
-export const Headings = () =>
-  headings.map((variant) => (
-    <Stack key={variant.variant} sx={{ color: textColor, mb: 2 }}>
-      <Typography color="bodyText.contrast" sx={{ fontWeight: '600' }} variant="S">
-        {variant.variant}
+/**
+ * Renders every typography variant of the theme with its size, line height and weight.
+ *
+ * @returns one sample per variant, from the largest to the smallest
+ */
+export const TypeScale = () =>
+  variantsDefinition.map(({ variant, use }) => (
+    <Stack key={variant} sx={{ mb: 4 }}>
+      <Typography color="text.secondary" variant="caption">
+        {`${variant} · ${fontSize[variant]}/${lineHeight[variant]} px · ${String(webTheme.typography[variant].fontWeight)} · ${use}`}
       </Typography>
-      <Typeset
-        fontFamily={headingsFontFamily}
-        fontSizes={[fontSizeToPx(variant.fontSize)]}
-        fontWeight={fontWeightBold}
-        sampleText={headingText}
-      />
-    </Stack>
-  ))
-
-export const BodyText = () =>
-  texts.map((variant) => (
-    <Stack key={variant.variant} sx={{ color: textColor, mb: 2 }}>
-      <Typography color="bodyText.contrast" sx={{ fontWeight: 'fontWeightBold' }} variant="S">
-        {variant.variant}
-      </Typography>
-      <Typeset
-        fontFamily={fontFamily}
-        fontSizes={[fontSizeToPx(variant.fontSize)]}
-        fontWeight={fontWeightRegular}
-        sampleText={bodyText}
-      />
+      <Typography variant={variant}>{sampleText}</Typography>
     </Stack>
   ))

@@ -2,4 +2,4 @@
 // statically parses it and cannot follow a re-export. The component + metadata come from the module.
 export const dynamic = 'force-dynamic'
 
-export { HomePage as default, generateMetadata } from '@/modules/home/page'
+export { DashboardPage as default, generateMetadata } from '@/modules/dashboard/page'

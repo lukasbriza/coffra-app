@@ -24,6 +24,12 @@ export const getQueryClient = () => {
   if (isServer) {
     return makeQueryClient()
   }
-  browserQueryClient ??= makeQueryClient()
+
+  if (browserQueryClient !== undefined) {
+    return browserQueryClient
+  }
+
+  browserQueryClient = makeQueryClient()
+
   return browserQueryClient
 }

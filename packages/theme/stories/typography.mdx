@@ -1,39 +1,25 @@
 import { Meta, Title } from '@storybook/addon-docs/blocks'
 
-import { ThemeProvider } from '../src/theme'
+import { ThemeProvider } from '../src/theme-provider'
 
-import { BodyText, Headings } from './typography'
+import { TypeScale } from './typography'
 
 <Meta title="Typography" />
 <Title>Typography</Title>
 
-## Available variants
+**Font:** Urbanist, one family for text and figures. The app loads it and sets `--font-urbanist`
+(`FONT_FAMILY_VARIABLE`); without it the stack falls back to `"Urbanist"`, `"Segoe UI"`, `system-ui`.
+
+**Weights:** 400 regular, 500 medium, 600 semibold, 700 bold (`theme.typography.fontWeight*`). Each variant has a
+default weight; a component sets another one from the theme where the design asks for it.
+
+**Numerals:** tabular on the whole page (`font-variant-numeric: tabular-nums` on `body`).
+
+Sizes and line heights are in `rem` (px / 16). On a narrow screen the net amount switches from `display` to
+`displayNarrow`; the component does that, not the variant.
 
 <br />
-<br />
 
-### Headings
-
-**Font:** JetBrains Mono
-
-**Weights:** 400 (regular), 500 (medium), 700 (bold)
-
-> NOTE: There are mobile variants for **h1**, **h2** and **h3** as well.
-
-<br />
-<br />
 <ThemeProvider>
-  <Headings />
-</ThemeProvider>
-
-### Body text
-
-**Font:** Poppins
-
-**Weights:** 400 (regular), 500 (medium), 700 (bold)
-
-<br />
-<br />
-<ThemeProvider>
-  <BodyText />
+  <TypeScale />
 </ThemeProvider>

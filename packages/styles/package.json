@@ -1,5 +1,5 @@
 {
-  "name": "@lukasbriza/styles",
+  "name": "@lukasbriza/coffra-styles",
   "version": "0.0.0",
   "private": true,
   "sideEffects": false,
@@ -30,7 +30,7 @@
     "@emotion/is-prop-valid": "1.4.0",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
-    "@lukasbriza/theme": "workspace:*",
+    "@lukasbriza/coffra-theme": "workspace:*",
     "@mui/material": "9.2.0",
     "@mui/styled-engine": "9.1.1",
     "@mui/system": "9.2.0",

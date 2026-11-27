@@ -63,11 +63,14 @@ Or `/scaffold <type> [name]` from Claude Code (wraps `turbo gen`, validates prer
 
 ## Shared building blocks
 
-- **`@lukasbriza/tokens`** — framework-free design tokens; the single colour source for the web MUI
+- **`@lukasbriza/coffra-tokens`** — framework-free design tokens; the single colour source for the web MUI
   theme and the mobile `@emotion/native` theme.
-- **`@lukasbriza/api`** — typed `openapi-fetch` + TanStack Query `$api`, multi-schema via
+- **`@lukasbriza/coffra-api`** — typed `openapi-fetch` + TanStack Query `$api`, multi-schema via
   `createApiClient`. Apps bind it once in a small `lib/api.ts` (env baseUrl stays per-app).
-- **`@lukasbriza/theme` / `styles` / `components`** — the MUI theme system for web apps.
+- **`@lukasbriza/coffra-theme` / `coffra-styles` / `coffra-components`** — the MUI theme system for web apps.
+
+The copies in `packages/` carry a `coffra-` prefix because their templates in `templates/` are workspaces too and
+keep the template names; two workspaces of one name make turbo fail.
 
 Web apps (`app-next`, `app-react`) ship SSR data via TanStack Query hydration; the mobile app fetches
 on mount. State: TanStack Query (server) + Zustand (client UI) + `searchParams`/forms — see the

@@ -1,12 +1,15 @@
 import { ColorItem, ColorPalette, Meta, Title } from '@storybook/addon-docs/blocks'
 
-import { palette } from './constants'
+import { colorDefinition } from './color-definition'
 
 <Meta title="Palette" />
 <Title>Color palette</Title>
 
+Light page with one dark band at the top of a screen. Every colour comes from `color` in `@lukasbriza/coffra-tokens`;
+what each role is for is in `design/DESIGN.md`.
+
 <ColorPalette>
-  {palette.map(({ title, subtitle, colors }) => (
+  {colorDefinition.map(({ title, subtitle, colors }) => (
     <ColorItem key={title} title={title} subtitle={subtitle} colors={colors} />
   ))}
 </ColorPalette>

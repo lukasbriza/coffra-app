@@ -267,7 +267,7 @@ export const validateEnv = (config: Record<string, unknown>): Env => {
   }
 
   // The API documentation is for development: production serves it only when asked to.
-  env.SWAGGER_ENABLED ??= env.NODE_ENV !== NodeEnv.Production
+  env.SWAGGER_ENABLED = env.SWAGGER_ENABLED ?? env.NODE_ENV !== NodeEnv.Production
 
   if (problems.length > 0) {
     throw new Error(`Invalid environment configuration:\n${problems.map((problem) => `  - ${problem}`).join('\n')}`)

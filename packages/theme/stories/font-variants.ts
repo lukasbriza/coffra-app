@@ -1,14 +1,26 @@
+import type { DesignVariant } from '../src/types'
+
 /**
- * Typography samples rendered in the Storybook typography story.
+ * One typography variant shown in the Storybook typography page.
+ *
+ * @property variant - the variant of the theme
+ * @property use - where the design uses it
  */
-export const variantsDefinition = {
-  h1: { variant: 'h1', fontSize: 48, lineHeight: 1.33333 },
-  h2: { variant: 'h2', fontSize: 32, lineHeight: 1.5 },
-  h3: { variant: 'h3', fontSize: 24, lineHeight: 1.33333 },
-  h4: { variant: 'h4', fontSize: 20, lineHeight: 1.4 },
-  h5: { variant: 'h5', fontSize: 16, lineHeight: 1.5 },
-  S: { variant: 'S', fontSize: 12, lineHeight: 1.33333 },
-  M: { variant: 'M', fontSize: 14, lineHeight: 1.42857 },
-  L: { variant: 'L', fontSize: 16, lineHeight: 1.5 },
-  XL: { variant: 'XL', fontSize: 18, lineHeight: 1.77778 },
+type VariantDefinition = {
+  variant: DesignVariant
+  use: string
 }
+
+/**
+ * Typography variants of the theme from the largest to the smallest, with their use from `design/DESIGN.md`.
+ */
+export const variantsDefinition: VariantDefinition[] = [
+  { variant: 'display', use: 'the net amount in the band' },
+  { variant: 'displayNarrow', use: 'the net amount on a narrow screen' },
+  { variant: 'title', use: 'the page title' },
+  { variant: 'figure', use: 'an amount that leads a card, the currency beside the display' },
+  { variant: 'heading', use: 'a card heading' },
+  { variant: 'body', use: 'running text and list rows' },
+  { variant: 'label', use: 'controls and legends' },
+  { variant: 'caption', use: 'the period, a share and a unit' },
+]

@@ -182,7 +182,7 @@ clears a 44 pt target.
 
 ## Token structure
 
-Tokens package `packages/tokens` (`@lukasbriza/tokens`), mapped by `design/tokens.config.json`; one Figma
+Tokens package `packages/tokens` (`@lukasbriza/coffra-tokens`), mapped by `design/tokens.config.json`; one Figma
 collection per set.
 
 | Set | Exports | CSS custom properties |
@@ -193,8 +193,8 @@ collection per set.
 
 A CSS name is the token path in kebab case (`chart.series1` → `--color-chart-series-1`). Not mapped to Figma:
 `breakpoint` (media queries, not a variable), and the template's `palette` / `mono` / `state` / `black` / `white` /
-`gray`, kept only because `@lukasbriza/theme` and the mobile template still read them. The font family lives here, in
-the Web section, not in the package.
+`gray`, which nothing in the repo reads since `@lukasbriza/coffra-theme` follows the design. The font family lives
+here, in the Web section, not in the package; the web theme carries it as its font stack.
 
 ## Figma
 

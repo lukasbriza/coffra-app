@@ -1,11 +1,11 @@
-# CLAUDE.md — components package (@lukasbriza/components)
+# CLAUDE.md — components package (@lukasbriza/coffra-components)
 
 Shared React component library. Inherits root `CLAUDE.md`.
 
 ## Stack
 
 - React 18 + MUI (base/material/system), `clsx`, `react-hook-form`. Built as a library (`dist/`).
-- Depends on `@lukasbriza/theme` and `@lukasbriza/styles` (`workspace:*`) — both must exist first.
+- Depends on `@lukasbriza/coffra-theme` and `@lukasbriza/coffra-styles` (`workspace:*`) — both must exist first.
 - Storybook stories live in `stories/` (picked up by the storybook app).
 
 ## Layout

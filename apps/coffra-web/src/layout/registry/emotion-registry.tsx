@@ -5,7 +5,7 @@ import { CacheProvider } from '@emotion/react'
 import { useServerInsertedHTML } from 'next/navigation'
 import { useState, type FC, type PropsWithChildren } from 'react'
 
-// import { ThemeProvider } from '@lukasbriza/theme' // uncomment when consuming the monorepo theme
+// import { ThemeProvider } from '@lukasbriza/coffra-theme' // uncomment when consuming the monorepo theme
 
 export const EmotionRegistry: FC<PropsWithChildren> = ({ children }) => {
   const [{ cache, flush }] = useState(() => {

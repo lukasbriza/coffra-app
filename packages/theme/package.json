@@ -1,5 +1,5 @@
 {
-  "name": "@lukasbriza/theme",
+  "name": "@lukasbriza/coffra-theme",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -29,11 +29,12 @@
     "lint": "eslint --cache .",
     "lint:fix": "pnpm run lint --fix",
     "qa": "run-p ts format lint",
+    "test": "vitest run",
     "ts": "tsc --build tsconfig.json"
   },
   "dependencies": {
+    "@lukasbriza/coffra-tokens": "workspace:*",
     "@lukasbriza/eslint-config": "workspace:*",
-    "@lukasbriza/tokens": "workspace:*",
     "@lukasbriza/ts-config": "workspace:*",
     "@mui/material": "9.2.0",
     "@mui/system": "9.2.0",
@@ -51,6 +52,7 @@
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "storybook": "10.4.6",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
   }
 }

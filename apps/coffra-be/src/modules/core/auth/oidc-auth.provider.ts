@@ -161,7 +161,12 @@ export class OidcAuthProvider implements AuthProviderInterface {
    * @throws ServiceUnavailableException when the discovery fails
    */
   private getConfiguration(): Promise<client.Configuration> {
-    this.configuration ??= this.discover()
+    if (this.configuration !== undefined) {
+      return this.configuration
+    }
+
+    this.configuration = this.discover()
+
     return this.configuration
   }
 
